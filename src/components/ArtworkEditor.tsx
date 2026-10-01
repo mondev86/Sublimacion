@@ -314,11 +314,29 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Zoom & view mode
-  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [zoomLevel, setZoomLevel] = useState<number>(0.9);
   const [viewSplit, setViewSplit] = useState<'processed' | 'on_garment' | 'split' | 'original'>('on_garment');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isDraggingOnGarment, setIsDraggingOnGarment] = useState<boolean>(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState<boolean>(false);
+
+  // Shortcuts and tools collapsible dropdown state
+  const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState<boolean>(false);
+  const toolsDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (toolsDropdownRef.current && !toolsDropdownRef.current.contains(event.target as Node)) {
+        setIsToolsDropdownOpen(false);
+      }
+    };
+    if (isToolsDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isToolsDropdownOpen]);
 
   // Shortcuts modal & toast state
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
@@ -1185,25 +1203,25 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
       {/* LEFT: Canvas & Viewport Area */}
       <div className="flex-1 flex flex-col bg-[#111726] rounded-xl border border-slate-800 overflow-hidden shadow-2xl w-full">
         {/* Viewport Toolbar */}
-        <div className="h-14 border-b border-slate-800 px-4 flex items-center justify-between bg-[#0e1422] shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="h-14 border-b border-slate-800 px-2 sm:px-4 flex items-center justify-between bg-[#0e1422] shrink-0 relative z-30 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2 overflow-hidden">
             {isExpandedView ? (
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
                 <Maximize2 className="w-3.5 h-3.5" />
-                Vista Ampliada
+                <span className="hidden sm:inline">Vista Ampliada</span>
               </span>
             ) : (
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lienzo de Trabajo</span>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:inline shrink-0">Lienzo</span>
             )}
-            <div className="h-4 w-px bg-slate-800" />
-            <span className="text-sm font-medium text-slate-300 truncate max-w-xs">{imageName}</span>
-            <span className="text-xs text-slate-500 font-mono tabular-nums">
+            <div className="h-4 w-px bg-slate-800 hidden md:block shrink-0" />
+            <span className="text-xs sm:text-sm font-medium text-slate-300 truncate">{imageName}</span>
+            <span className="text-[11px] text-slate-500 font-mono tabular-nums hidden lg:inline shrink-0">
               {pixelWidth} x {pixelHeight} px · {calculatedDpi} DPI
             </span>
           </div>
 
           {/* Quick Previews & Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Split Mode Selector */}
             <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-medium">
               <button
@@ -1211,300 +1229,332 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                   setViewSplit('on_garment');
                   setActiveTab('placement');
                 }}
-                className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                className={`px-2 sm:px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
                   viewSplit === 'on_garment' ? 'bg-indigo-600 text-white shadow-sm font-semibold' : 'text-slate-400 hover:text-white'
                 }`}
+                title="Modo Remera Textil con Medidas y Regla"
               >
                 <Shirt className="w-3.5 h-3.5" />
-                En Prenda & Regla
+                <span>Prenda</span>
               </button>
               <button
                 onClick={() => setViewSplit('processed')}
-                className={`px-2.5 py-1 rounded transition-colors ${
-                  viewSplit === 'processed' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                className={`px-2 sm:px-2.5 py-1 rounded transition-colors ${
+                  viewSplit === 'processed' ? 'bg-indigo-600 text-white shadow-sm font-semibold' : 'text-slate-400 hover:text-white'
                 }`}
+                title="Modo Lienzo Gráfico Puro"
               >
                 Lienzo
               </button>
               <button
                 onClick={() => setViewSplit('split')}
-                className={`px-2.5 py-1 rounded transition-colors ${
-                  viewSplit === 'split' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                className={`px-2 sm:px-2.5 py-1 rounded transition-colors hidden sm:block ${
+                  viewSplit === 'split' ? 'bg-indigo-600 text-white shadow-sm font-semibold' : 'text-slate-400 hover:text-white'
                 }`}
+                title="Comparar Original vs Procesado"
               >
                 Comparar
               </button>
-              <button
-                onClick={() => setViewSplit('original')}
-                className={`px-2.5 py-1 rounded transition-colors ${
-                  viewSplit === 'original' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Original
-              </button>
             </div>
 
-            {/* Quick Garment & Ruler Controls when on_garment is active */}
-            {viewSplit === 'on_garment' && (
-              <div className="flex items-center gap-1.5 pl-1 border-l border-slate-800/80">
-                {/* Toggle Garment Panel */}
-                <button
-                  onClick={() => {
-                    const next = !isGarmentCardCollapsed;
-                    setIsGarmentCardCollapsed(next);
-                    showToast(next ? 'Panel de prenda colapsado' : 'Panel de prenda visible');
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
-                    !isGarmentCardCollapsed
-                      ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/60 shadow-xs'
-                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'
-                  }`}
-                  title={isGarmentCardCollapsed ? 'Desplegar panel de prenda (Talles, Frente/Espalda)' : 'Colapsar panel de prenda'}
-                >
-                  <Shirt className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>{isGarmentCardCollapsed ? 'Ver Prenda' : 'Prenda'}</span>
-                </button>
-
-                {/* Toggle Ruler Panel */}
-                <button
-                  onClick={() => {
-                    const next = !isRulerCardCollapsed;
-                    setIsRulerCardCollapsed(next);
-                    showToast(next ? 'Panel de regla colapsado (R)' : 'Panel de regla visible (R)');
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
-                    !isRulerCardCollapsed
-                      ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/60 shadow-xs'
-                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'
-                  }`}
-                  title={isRulerCardCollapsed ? 'Desplegar panel de regla lateral (R)' : 'Colapsar panel de regla para despejar la vista (R)'}
-                >
-                  <Ruler className="w-3.5 h-3.5 text-yellow-400" />
-                  <span>{isRulerCardCollapsed ? 'Ver Regla' : 'Regla'}</span>
-                </button>
-
-                {/* Toggle Laser Symmetry Guides */}
-                <button
-                  onClick={() => {
-                    setShowLaserGuides((prev) => {
-                      const next = !prev;
-                      showToast(next ? 'Guías láser activadas' : 'Guías láser ocultas');
-                      return next;
-                    });
-                  }}
-                  className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all border cursor-pointer ${
-                    showLaserGuides
-                      ? 'bg-cyan-950/40 text-cyan-300 border-cyan-500/50'
-                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'
-                  }`}
-                  title="Alternar guías láser y eje de simetría"
-                >
-                  <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="hidden md:inline">{showLaserGuides ? 'Láser ON' : 'Láser OFF'}</span>
-                </button>
-
-                {/* Toggle Front / Back */}
-                <button
-                  onClick={() => {
-                    setGarmentSide((s) => (s === 'front' ? 'back' : 'front'));
-                    showToast(garmentSide === 'front' ? 'Vista: Espalda' : 'Vista: Frente');
-                  }}
-                  className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all border bg-slate-900 border-slate-700 text-slate-300 hover:text-white cursor-pointer"
-                  title="Alternar Frente o Espalda de la prenda (F)"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>{garmentSide === 'front' ? 'Frente' : 'Espalda'}</span>
-                </button>
-              </div>
-            )}
-
-            {/* Quick Background Removal Button in Toolbar */}
-            <button
-              onClick={() => {
-                setActiveTab('bg_remove');
-                if (viewSplit === 'on_garment') setViewSplit('processed');
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border ${
-                activeTab === 'bg_remove'
-                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                  : 'bg-emerald-950/40 text-emerald-300 border-emerald-600/40 hover:bg-emerald-900/60'
-              }`}
-              title="Abrir suite de Quitar Fondo"
-            >
-              <Eraser className="w-3.5 h-3.5" />
-              <span>Quitar Fondo</span>
-            </button>
-
-            {/* Quick Magic Eraser for Letter Holes */}
-            <button
-              onClick={() => {
-                setActiveTab('bg_remove');
-                setIsMagicEraserActive((prev) => !prev);
-                if (viewSplit === 'on_garment') setViewSplit('processed');
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
-                isMagicEraserActive
-                  ? 'bg-purple-600 text-white border-purple-400 shadow-sm ring-2 ring-purple-500/50'
-                  : 'bg-purple-950/40 text-purple-300 border-purple-600/40 hover:bg-purple-900/60'
-              }`}
-              title="Borrador Mágico para huecos de letras (O, A, P, R, B...)"
-            >
-              <Wand2 className="w-3.5 h-3.5" />
-              <span>Borrador Letras</span>
-            </button>
-
-            {/* Quick Mirror for Sublimation */}
-            <button
-              onClick={handleToggleMirror}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
-                isMirrored
-                  ? 'bg-amber-500 text-slate-950 font-bold border-amber-300 ring-2 ring-amber-400/50 shadow-sm'
-                  : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-800'
-              }`}
-              title="Voltear en espejo horizontal (Obligatorio al imprimir en papel transfer para sublimar)"
-            >
-              <FlipHorizontal className="w-3.5 h-3.5" />
-              <span>{isMirrored ? '🪞 Espejo ON' : 'Espejo'}</span>
-            </button>
-
-            {/* Quick Rotate 90 */}
-            <button
-              onClick={handleRotate90}
-              disabled={isProcessing}
-              className="p-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
-              title="Rotar 90° horario"
-            >
-              <RotateCw className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Quick Auto-Trim */}
-            <button
-              onClick={handleAutoTrimBorders}
-              disabled={isProcessing}
-              className="p-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
-              title="Recortar márgenes transparentes vacíos al contorno exacto"
-            >
-              <Crop className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Zoom Controls & Fit */}
-            <div className="flex items-center gap-1 pl-2 border-l border-slate-800">
+            {/* Compact Zoom Controls */}
+            <div className="flex items-center gap-0.5 sm:gap-1 pl-1 border-l border-slate-800">
               <button
                 onClick={() => setZoomLevel((z) => Math.max(0.4, Math.round((z - 0.1) * 100) / 100))}
-                className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Alejar"
+                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title="Alejar zoom"
               >
-                <ZoomOut className="w-4 h-4" />
+                <ZoomOut className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => setZoomLevel(0.85)}
-                className={`text-xs font-mono tabular-nums px-2 py-0.5 rounded transition-colors ${
-                  zoomLevel === 0.85
-                    ? 'bg-indigo-600 text-white font-bold shadow-sm'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-                title="Ajustar remera completa compacta"
+                onClick={() => setZoomLevel(0.9)}
+                className="text-xs font-mono font-bold tabular-nums px-1.5 py-0.5 rounded text-indigo-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+                title="Ajustar zoom al 90%"
               >
-                Encajar
-              </button>
-              <button
-                onClick={() => setZoomLevel(1)}
-                className={`text-xs font-mono tabular-nums px-1.5 py-0.5 rounded transition-colors ${
-                  zoomLevel === 1
-                    ? 'bg-indigo-600/50 text-white font-semibold'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
-                title="Zoom 100%"
-              >
-                100%
-              </button>
-              <button
-                onClick={() => setZoomLevel(1.2)}
-                className={`text-xs font-mono tabular-nums px-2 py-0.5 rounded transition-colors ${
-                  zoomLevel === 1.2
-                    ? 'bg-indigo-600 text-white font-bold shadow-sm'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-                title="Ajustar y llenar a lo ancho (Remera amplia para pantallas grandes)"
-              >
-                Ancho +
+                {Math.round(zoomLevel * 100)}%
               </button>
               <button
                 onClick={() => setZoomLevel((z) => Math.min(2.5, Math.round((z + 0.1) * 100) / 100))}
-                className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Acercar"
+                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title="Acercar zoom"
               >
-                <ZoomIn className="w-4 h-4" />
+                <ZoomIn className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Undo / Redo & Shortcuts Guide */}
-            <div className="flex items-center gap-1 pl-2 border-l border-slate-800">
+            {/* COLLAPSIBLE MENU: Atajos, Paneles, Utilidades y Herramientas */}
+            <div className="relative" ref={toolsDropdownRef}>
               <button
-                onClick={handleUndo}
-                className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Deshacer (Ctrl+Z)"
-              >
-                <Undo2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleRedo}
-                className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Rehacer (Ctrl+Y)"
-              >
-                <Redo2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setIsShortcutsModalOpen(true)}
-                className="p-1.5 rounded hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 text-xs"
-                title="Lista de atajos de teclado (?)"
-              >
-                <Keyboard className="w-4 h-4" />
-                <span className="hidden xl:inline text-[11px] font-medium">Atajos</span>
-              </button>
-            </div>
-
-            {/* Expand / Collapse Right Tools Panel */}
-            <div className="pl-2 border-l border-slate-800">
-              <button
-                onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
-                className={`px-2.5 py-1 text-xs rounded-lg border transition-all flex items-center gap-1.5 font-medium cursor-pointer ${
-                  isPanelCollapsed
-                    ? 'bg-indigo-600/40 border-indigo-500 text-indigo-200 hover:bg-indigo-600/60 shadow-sm'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                onClick={() => setIsToolsDropdownOpen(!isToolsDropdownOpen)}
+                className={`px-2.5 py-1 text-xs rounded-lg border font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isToolsDropdownOpen
+                    ? 'bg-indigo-600 text-white border-indigo-400 shadow-md ring-2 ring-indigo-500/40'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
                 }`}
-                title={isPanelCollapsed ? 'Mostrar panel lateral de herramientas' : 'Ocultar panel lateral y expandir la remera al ancho completo'}
+                title="Desplegar atajos, utilidades y herramientas de impresión"
               >
-                {isPanelCollapsed ? <PanelRightOpen className="w-3.5 h-3.5" /> : <PanelRightClose className="w-3.5 h-3.5" />}
-                <span className="hidden sm:inline">{isPanelCollapsed ? 'Ajustes' : 'Expandir'}</span>
+                <Keyboard className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Atajos & Más</span>
+                <span className="sm:hidden">Más</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isToolsDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
+
+              {/* Popover Dropdown Panel */}
+              {isToolsDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-[#0c1222] border-2 border-indigo-500/80 rounded-xl shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Keyboard className="w-4 h-4 text-indigo-400" />
+                      Atajos & Herramientas
+                    </span>
+                    <button
+                      onClick={() => setIsToolsDropdownOpen(false)}
+                      className="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Paneles Laterales de la Prenda & Regla */}
+                  {viewSplit === 'on_garment' && (
+                    <div className="space-y-1.5 bg-slate-900/90 rounded-lg p-2 border border-slate-800">
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Paneles en Pantalla</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          onClick={() => {
+                            const next = !isGarmentCardCollapsed;
+                            setIsGarmentCardCollapsed(next);
+                            showToast(next ? 'Panel prenda oculto' : 'Panel prenda visible');
+                          }}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                            !isGarmentCardCollapsed
+                              ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/60'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <Shirt className="w-3.5 h-3.5" />
+                          <span>Prenda {!isGarmentCardCollapsed ? 'ON' : 'OFF'}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const next = !isRulerCardCollapsed;
+                            setIsRulerCardCollapsed(next);
+                            showToast(next ? 'Regla oculta' : 'Regla visible');
+                          }}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                            !isRulerCardCollapsed
+                              ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/60'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          <Ruler className="w-3.5 h-3.5" />
+                          <span>Regla {!isRulerCardCollapsed ? 'ON' : 'OFF'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quitar Fondo Rápido */}
+                  <button
+                    onClick={() => {
+                      setActiveTab('bg_remove');
+                      if (viewSplit === 'on_garment') setViewSplit('processed');
+                      setIsToolsDropdownOpen(false);
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between border bg-emerald-950/40 text-emerald-300 border-emerald-600/50 hover:bg-emerald-900/60 cursor-pointer transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Eraser className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Quitar Fondo de la Imagen</span>
+                    </div>
+                    <span className="text-[10px] bg-emerald-900/80 px-1.5 py-0.5 rounded text-emerald-200">Abrir</span>
+                  </button>
+
+                  {/* Historial Deshacer / Rehacer */}
+                  <div className="flex items-center justify-between bg-slate-900/90 rounded-lg p-2 border border-slate-800">
+                    <span className="text-xs text-slate-300 font-medium">Historial</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          handleUndo();
+                          setIsToolsDropdownOpen(false);
+                        }}
+                        className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-1 cursor-pointer border border-slate-700"
+                        title="Deshacer última acción (Ctrl+Z)"
+                      >
+                        <Undo2 className="w-3.5 h-3.5" />
+                        <span>Deshacer</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleRedo();
+                          setIsToolsDropdownOpen(false);
+                        }}
+                        className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-1 cursor-pointer border border-slate-700"
+                        title="Rehacer acción (Ctrl+Y)"
+                      >
+                        <Redo2 className="w-3.5 h-3.5" />
+                        <span>Rehacer</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Utilidades de Estampa */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Utilidades</span>
+
+                    {/* Borrador Huecos */}
+                    <button
+                      onClick={() => {
+                        setActiveTab('bg_remove');
+                        setIsMagicEraserActive((prev) => !prev);
+                        if (viewSplit === 'on_garment') setViewSplit('processed');
+                        setIsToolsDropdownOpen(false);
+                      }}
+                      className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between border cursor-pointer transition-colors ${
+                        isMagicEraserActive
+                          ? 'bg-purple-600 text-white border-purple-400'
+                          : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Wand2 className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Borrador Letras (O, A, P...)</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-purple-300">{isMagicEraserActive ? 'Activo' : 'Auto'}</span>
+                    </button>
+
+                    {/* Modo Espejo */}
+                    <button
+                      onClick={() => {
+                        handleToggleMirror();
+                        setIsToolsDropdownOpen(false);
+                      }}
+                      className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between border cursor-pointer transition-colors ${
+                        isMirrored
+                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-300'
+                          : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <FlipHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Modo Espejo (Sublimación)</span>
+                      </div>
+                      <span className="text-[10px] font-mono">{isMirrored ? 'ON' : 'OFF'}</span>
+                    </button>
+
+                    {/* Rotar 90 & Auto Trim */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        onClick={() => {
+                          handleRotate90();
+                          setIsToolsDropdownOpen(false);
+                        }}
+                        disabled={isProcessing}
+                        className="px-2 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <RotateCw className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Rotar 90°</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleAutoTrimBorders();
+                          setIsToolsDropdownOpen(false);
+                        }}
+                        disabled={isProcessing}
+                        className="px-2 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Crop className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Auto-Trim</span>
+                      </button>
+                    </div>
+
+                    {/* Guías Láser & Giro */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        onClick={() => {
+                          setShowLaserGuides((prev) => !prev);
+                          showToast(!showLaserGuides ? 'Guías láser activadas' : 'Guías láser ocultas');
+                        }}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 cursor-pointer ${
+                          showLaserGuides
+                            ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/50'
+                            : 'bg-slate-900 text-slate-400 border-slate-800'
+                        }`}
+                      >
+                        <Crosshair className="w-3.5 h-3.5" />
+                        <span>{showLaserGuides ? 'Láser ON' : 'Láser OFF'}</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setGarmentSide((s) => (s === 'front' ? 'back' : 'front'));
+                          showToast(garmentSide === 'front' ? 'Vista: Espalda' : 'Vista: Frente');
+                        }}
+                        className="px-2 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>{garmentSide === 'front' ? 'Ver Espalda' : 'Ver Frente'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Modal de atajos & Vista ampliada */}
+                  <div className="pt-2 border-t border-slate-800 flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        setIsShortcutsModalOpen(true);
+                        setIsToolsDropdownOpen(false);
+                      }}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Keyboard className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Ver Atajos de Teclado (?)</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const next = !isExpandedView;
+                        setIsExpandedView(next);
+                        if (next) {
+                          setIsPanelCollapsed(true);
+                          setZoomLevel(0.9);
+                          showToast('⛶ Vista Ampliada activada');
+                        } else {
+                          showToast('Vista normal restaurada');
+                        }
+                        setIsToolsDropdownOpen(false);
+                      }}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 cursor-pointer"
+                      title="Pantalla Completa / Vista Ampliada"
+                    >
+                      {isExpandedView ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Vista Ampliada / Fullscreen Mode Toggle */}
-            <div className="pl-2 border-l border-slate-800">
-              <button
-                onClick={() => {
-                  const next = !isExpandedView;
-                  setIsExpandedView(next);
-                  if (next) {
-                    setIsPanelCollapsed(true);
-                    setZoomLevel(0.9);
-                    showToast('⛶ Vista Ampliada activada (Presiona Esc o el botón para restaurar)');
-                  } else {
-                    showToast('Vista normal restaurada');
-                  }
-                }}
-                className={`px-2.5 py-1 text-xs rounded-lg border transition-all flex items-center gap-1.5 font-bold cursor-pointer ${
-                  isExpandedView
-                    ? 'bg-indigo-600 text-white border-indigo-400 ring-2 ring-indigo-500/50 shadow-md'
-                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-                title={isExpandedView ? 'Salir de vista ampliada (Esc)' : 'Expandir vista para mayor comodidad sin distracciones'}
-              >
-                {isExpandedView ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                <span>{isExpandedView ? 'Restaurar' : 'Vista Ampliada'}</span>
-              </button>
-            </div>
+            {/* PROMINENT "AJUSTES" (PANEL LATERAL) BUTTON - ALWAYS VISIBLE */}
+            <button
+              onClick={() => {
+                const next = !isPanelCollapsed;
+                setIsPanelCollapsed(next);
+                showToast(next ? 'Panel lateral colapsado' : 'Panel de ajustes abierto');
+              }}
+              className={`px-3 py-1.5 text-xs rounded-lg border font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shrink-0 whitespace-nowrap ${
+                !isPanelCollapsed
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400 ring-2 ring-indigo-500/40'
+                  : 'bg-indigo-950/90 hover:bg-indigo-900 border-indigo-500/70 text-indigo-300 ring-1 ring-indigo-500/40'
+              }`}
+              title={!isPanelCollapsed ? 'Panel de ajustes abierto (Clic para expandir lienzo)' : 'Abrir panel lateral de ajustes'}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Ajustes</span>
+              {isPanelCollapsed ? (
+                <PanelRightOpen className="w-3.5 h-3.5 ml-0.5 text-indigo-300" />
+              ) : (
+                <PanelRightClose className="w-3.5 h-3.5 ml-0.5 text-indigo-200" />
+              )}
+            </button>
           </div>
         </div>
 
@@ -1558,12 +1608,12 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
               <div className="relative flex items-start justify-center gap-4 py-1 select-none w-full max-w-full">
                 {/* LEFT OUTSIDE CARD: Garment Specs, Sizes & Side View (100% OUTSIDE the shirt, symmetric to right ruler) */}
                 {!isGarmentCardCollapsed ? (
-                  <div className="flex flex-col gap-3 w-64 shrink-0 select-none animate-in fade-in slide-in-from-left-2 duration-150">
-                    <div className="bg-[#0e1422]/95 border-2 border-indigo-500/70 rounded-xl p-3.5 shadow-2xl backdrop-blur-md space-y-3">
+                  <div className="flex flex-col gap-2.5 w-56 shrink-0 select-none animate-in fade-in slide-in-from-left-2 duration-150">
+                    <div className="bg-[#0e1422]/95 border-2 border-indigo-500/70 rounded-xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-md space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Shirt className="w-4 h-4 text-indigo-400 shrink-0" />
-                          <span className="text-xs font-bold text-white uppercase tracking-wider">Prenda & Medidas</span>
+                        <div className="flex items-center gap-1.5">
+                          <Shirt className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                          <span className="text-[11px] font-bold text-white uppercase tracking-wider">Prenda & Medidas</span>
                         </div>
                         <button
                           onClick={() => {
@@ -1573,16 +1623,16 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                           className="p-1 px-1.5 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[10px] font-semibold cursor-pointer border border-slate-700"
                           title="Colapsar panel de prenda"
                         >
-                          <ChevronLeft className="w-3.5 h-3.5" />
+                          <ChevronLeft className="w-3 h-3" />
                           <span>Ocultar</span>
                         </button>
                       </div>
 
                       {/* Talle Selector */}
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Talle Prenda</span>
-                          <span className="text-[10px] font-mono font-bold text-indigo-300">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Talle Prenda</span>
+                          <span className="text-[9px] font-mono font-bold text-indigo-300">
                             {GARMENT_CHEST_WIDTH_CM[garmentSize]} cm pecho
                           </span>
                         </div>
@@ -1594,7 +1644,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                 setGarmentSize(sz);
                                 showToast(`Talle ${sz} (${GARMENT_CHEST_WIDTH_CM[sz]} cm pecho)`);
                               }}
-                              className={`py-1 text-center font-bold text-xs rounded transition-all border cursor-pointer ${
+                              className={`py-0.5 text-center font-bold text-[11px] rounded transition-all border cursor-pointer ${
                                 garmentSize === sz
                                   ? 'bg-indigo-600 text-white border-indigo-400 shadow-sm ring-1 ring-indigo-400'
                                   : 'bg-slate-900/90 text-slate-300 border-slate-700 hover:bg-slate-800 hover:text-white'
@@ -1608,9 +1658,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
 
                       {/* Vista Activa: Frente / Espalda */}
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Lado de Estampa</span>
-                          <span className="text-[9px] font-bold text-indigo-400 uppercase px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-700">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Lado de Estampa</span>
+                          <span className="text-[9px] font-bold text-indigo-400 uppercase px-1 py-0.2 rounded bg-indigo-950/80 border border-indigo-700">
                             {garmentSide === 'front' ? 'Frente' : 'Espalda'}
                           </span>
                         </div>
@@ -1620,13 +1670,13 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                               setGarmentSide('front');
                               showToast('Vista: Frente');
                             }}
-                            className={`py-1.5 px-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                            className={`py-1 px-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 border transition-all cursor-pointer ${
                               garmentSide === 'front'
                                 ? 'bg-indigo-600 text-white border-indigo-400 shadow-sm ring-1 ring-indigo-400/50'
                                 : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'
                             }`}
                           >
-                            <Shirt className="w-3.5 h-3.5 text-indigo-300" />
+                            <Shirt className="w-3 h-3 text-indigo-300" />
                             <span>Frente</span>
                           </button>
                           <button
@@ -1634,27 +1684,27 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                               setGarmentSide('back');
                               showToast('Vista: Espalda');
                             }}
-                            className={`py-1.5 px-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                            className={`py-1 px-1.5 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 border transition-all cursor-pointer ${
                               garmentSide === 'back'
                                 ? 'bg-amber-600 text-white border-amber-400 shadow-sm ring-1 ring-amber-400/50'
                                 : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'
                             }`}
                           >
-                            <RotateCw className="w-3.5 h-3.5 text-amber-300" />
+                            <RotateCw className="w-3 h-3 text-amber-300" />
                             <span>Espalda</span>
                           </button>
                         </div>
                       </div>
 
                       {/* Ocupación en Pecho */}
-                      <div className="pt-2 border-t border-slate-800 space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
+                      <div className="pt-1.5 border-t border-slate-800 space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
                           <span className="text-slate-400">Ocupación Pecho:</span>
                           <span className="font-mono font-bold text-emerald-400">
                             {Math.round((targetWidthCm / GARMENT_CHEST_WIDTH_CM[garmentSize]) * 100)}%
                           </span>
                         </div>
-                        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full transition-all duration-300"
                             style={{
@@ -1662,19 +1712,19 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                             }}
                           />
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-300 font-mono">
+                        <div className="flex items-center justify-between text-[10px] text-slate-300 font-mono">
                           <span>Estampa:</span>
                           <strong className="text-indigo-300">{targetWidthCm} x {targetHeightCm} cm</strong>
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono">
+                        <div className="text-[9px] text-slate-400 font-mono">
                           Calidad: <span className="text-emerald-400 font-semibold">{calculatedDpi} DPI</span>
                         </div>
                       </div>
 
                       {/* Color Prenda Swatches */}
-                      <div className="pt-2 border-t border-slate-800 space-y-1.5">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Color Prenda</span>
-                        <div className="flex items-center gap-1.5">
+                      <div className="pt-1.5 border-t border-slate-800 space-y-1">
+                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide block">Color Prenda</span>
+                        <div className="flex items-center gap-1">
                           {[
                             { hex: '#0f172a', name: 'Negro' },
                             { hex: '#ffffff', name: 'Blanco' },
@@ -1692,9 +1742,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                               }}
                               title={`Prenda ${swatch.name}`}
                               style={{ backgroundColor: swatch.hex }}
-                              className={`flex-1 h-6 rounded-md border transition-all cursor-pointer ${
+                              className={`flex-1 h-5 rounded border transition-all cursor-pointer ${
                                 previewBgColor === swatch.hex
-                                  ? 'border-indigo-400 ring-2 ring-indigo-500/50 scale-105 shadow-sm'
+                                  ? 'border-indigo-400 ring-1 ring-indigo-500/50 scale-105 shadow-sm'
                                   : 'border-slate-700 hover:border-slate-500'
                               }`}
                             />
@@ -1703,14 +1753,14 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                       </div>
 
                       {/* Guías Láser Switch */}
-                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-                        <span className="text-[11px] text-slate-300">Guías de Simetría</span>
+                      <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-300">Guías de Simetría</span>
                         <button
                           onClick={() => {
                             setShowLaserGuides(!showLaserGuides);
                             showToast(!showLaserGuides ? 'Guías láser activadas' : 'Guías láser ocultas');
                           }}
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
                             showLaserGuides
                               ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/50'
                               : 'bg-slate-800 text-slate-400 border-slate-700'
@@ -1750,7 +1800,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
 
                 {/* CENTER: PURE T-SHIRT (ZERO BOXES COVERING THE NECK OR IMAGE!) */}
                   <div
-                    className="relative w-[570px] h-[660px] max-w-full rounded-2xl overflow-hidden shadow-2xl border border-slate-700/80 select-none cursor-crosshair transition-colors shrink-0"
+                    className="relative w-[480px] h-[550px] max-w-full rounded-2xl overflow-hidden shadow-2xl border border-slate-700/80 select-none cursor-crosshair transition-colors shrink-0"
                     style={{ backgroundColor: previewBgColor }}
                     onMouseDown={() => setIsDraggingOnGarment(true)}
                     onMouseUp={() => setIsDraggingOnGarment(false)}
@@ -1761,10 +1811,10 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                       const mouseY = e.clientY - rect.top;
                       const mouseX = e.clientX - rect.left;
                       const chestWidth = GARMENT_CHEST_WIDTH_CM[garmentSize];
-                      const pxPerCm = (570 * 0.70) / chestWidth;
-                      const collarY = garmentSide === 'front' ? 105 : 95;
+                      const pxPerCm = (480 * 0.70) / chestWidth;
+                      const collarY = garmentSide === 'front' ? 88 : 80;
                       const newDistCm = Math.max(1, Math.min(25, (mouseY - collarY) / pxPerCm));
-                      const centerX = 285;
+                      const centerX = 240;
                       const newOffsetCm = Math.max(-18, Math.min(18, (mouseX - centerX) / pxPerCm));
                       setPlacementDistanceCm(Math.round(newDistCm * 10) / 10);
                       setPlacementOffsetXCm(Math.round(newOffsetCm * 10) / 10);
@@ -1814,9 +1864,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
 
                     {/* Subtle Collar Seam Guideline - Front scoop vs Back high neck */}
                     {garmentSide === 'front' ? (
-                      <div className="absolute top-[105px] left-1/2 -translate-x-1/2 w-44 h-10 border-b border-dashed border-indigo-400/40 rounded-b-full pointer-events-none z-10" />
+                      <div className="absolute top-[88px] left-1/2 -translate-x-1/2 w-36 h-8 border-b border-dashed border-indigo-400/40 rounded-b-full pointer-events-none z-10" />
                     ) : (
-                      <div className="absolute top-[95px] left-1/2 -translate-x-1/2 w-40 h-5 border-b-2 border-dashed border-amber-400/60 rounded-b-lg pointer-events-none z-10" />
+                      <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-32 h-4 border-b-2 border-dashed border-amber-400/60 rounded-b-lg pointer-events-none z-10" />
                     )}
 
                     {/* Laser Vertical Symmetry Line - Clean hairline, NO text box! */}
@@ -1827,9 +1877,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                     {/* Laser Sisa guideline - Subtle hairline only */}
                     {showLaserGuides && (
                       <div
-                        className="absolute left-6 right-6 border-t border-dashed border-slate-400/20 pointer-events-none z-10"
+                        className="absolute left-5 right-5 border-t border-dashed border-slate-400/20 pointer-events-none z-10"
                         style={{
-                          top: `${(garmentSide === 'front' ? 105 : 95) + (22 * (570 * 0.70)) / GARMENT_CHEST_WIDTH_CM[garmentSize]}px`,
+                          top: `${(garmentSide === 'front' ? 88 : 80) + (22 * (480 * 0.70)) / GARMENT_CHEST_WIDTH_CM[garmentSize]}px`,
                         }}
                       />
                     )}
@@ -1837,12 +1887,12 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                     {/* Graphic Print Layer on Garment */}
                     {(() => {
                       const chestWidth = GARMENT_CHEST_WIDTH_CM[garmentSize];
-                      const pxPerCm = (570 * 0.70) / chestWidth;
+                      const pxPerCm = (480 * 0.70) / chestWidth;
                       const printW = targetWidthCm * pxPerCm;
                       const printH = targetHeightCm * pxPerCm;
-                      const collarY = garmentSide === 'front' ? 105 : 95;
+                      const collarY = garmentSide === 'front' ? 88 : 80;
                       const topY = collarY + placementDistanceCm * pxPerCm;
-                      const leftX = 285 + placementOffsetXCm * pxPerCm;
+                      const leftX = 240 + placementOffsetXCm * pxPerCm;
 
                       return (
                         <>
@@ -1854,7 +1904,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                 className="absolute right-0 border-t border-dashed border-yellow-400/60"
                                 style={{
                                   top: `${collarY}px`,
-                                  width: '36px',
+                                  width: '32px',
                                 }}
                               />
                               {/* Horizontal guide from graphic top to right edge */}
@@ -1862,7 +1912,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                 className="absolute right-0 border-t border-dashed border-yellow-400/60"
                                 style={{
                                   top: `${topY}px`,
-                                  width: '36px',
+                                  width: '32px',
                                 }}
                               />
                               {/* Right edge caliper bracket on shirt border */}
@@ -1911,13 +1961,13 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                   {/* RIGHT OUTSIDE CARD: Measurement & Collar Distance (100% OUTSIDE the shirt, complete and fully readable) */}
                   {showRulerCm && (
                     !isRulerCardCollapsed ? (
-                      <div className="flex flex-col gap-3 w-64 shrink-0 select-none animate-in fade-in slide-in-from-right-2 duration-150">
+                      <div className="flex flex-col gap-2.5 w-56 shrink-0 select-none animate-in fade-in slide-in-from-right-2 duration-150">
                         {/* The Measurement Box OUTSIDE the t-shirt */}
-                        <div className="bg-[#0e1422]/95 border-2 border-yellow-400/80 rounded-xl p-4 shadow-2xl backdrop-blur-md space-y-2.5">
+                        <div className="bg-[#0e1422]/95 border-2 border-yellow-400/80 rounded-xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-md space-y-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse shrink-0" />
-                              <span className="text-xs font-bold text-yellow-300 uppercase tracking-wider">Distancia Cuello</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse shrink-0" />
+                              <span className="text-[11px] font-bold text-yellow-300 uppercase tracking-wider">Distancia Cuello</span>
                             </div>
                             <button
                               onClick={() => {
@@ -1928,47 +1978,47 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                               title="Colapsar regla para despejar la vista (R)"
                             >
                               <span>Ocultar</span>
-                              <ChevronRight className="w-3.5 h-3.5" />
+                              <ChevronRight className="w-3 h-3" />
                             </button>
                           </div>
 
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-3xl font-mono font-extrabold text-white tracking-tight">
+                            <span className="text-2xl font-mono font-extrabold text-white tracking-tight">
                               {placementDistanceCm}
                             </span>
-                            <span className="text-sm font-semibold text-slate-400">cm</span>
+                            <span className="text-xs font-semibold text-slate-400">cm</span>
                           </div>
 
-                          <div className="pt-2 border-t border-slate-800">
-                            <div className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                          <div className="pt-1.5 border-t border-slate-800">
+                            <div className="text-[11px] font-semibold text-amber-300 flex items-center gap-1">
                               <span>✋</span>
                               <span>{getFingerEquivalence(placementDistanceCm)}</span>
                             </div>
-                            <span className="text-[11px] text-slate-400 block mt-1">
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
                               Estándar adultos: 7 a 8 cm (3 a 4 dedos).
                             </span>
                           </div>
 
-                          <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-300">
+                          <div className="pt-1.5 border-t border-slate-800 text-[10px] text-slate-300">
                             {placementOffsetXCm === 0 ? (
                               <span className="text-emerald-400 font-semibold flex items-center gap-1">
                                 🎯 Centrado en el eje láser
                               </span>
                             ) : (
                               <span>
-                                Desplazamiento: <strong className="text-white">{Math.abs(placementOffsetXCm)} cm</strong> {placementOffsetXCm < 0 ? 'a la izquierda' : 'a la derecha'}
+                                Desplazamiento: <strong className="text-white">{Math.abs(placementOffsetXCm)} cm</strong> {placementOffsetXCm < 0 ? 'a la izq.' : 'a la der.'}
                               </span>
                             )}
                           </div>
                         </div>
 
                         {/* Quick Presets outside the shirt - Categorized Most Used Industry Standards */}
-                        <div className="bg-slate-900/85 border border-slate-800 rounded-xl p-3 space-y-2.5">
+                        <div className="bg-slate-900/85 border border-slate-800 rounded-xl p-2.5 space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
+                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">
                               Ubicaciones Típicas
                             </span>
-                            <span className="text-[10px] text-indigo-400 font-mono font-semibold">12 Estándares</span>
+                            <span className="text-[9px] text-indigo-400 font-mono font-semibold">12 Estándares</span>
                           </div>
 
                           {/* Frente */}

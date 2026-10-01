@@ -29,6 +29,7 @@ type GarmentType = 'tshirt' | 'hoodie' | 'mug' | 'tote';
 interface ProductConfig {
   name: string;
   image: string;
+  backImage?: string;
   defaultX: number;
   defaultY: number;
   defaultScale: number;
@@ -36,6 +37,7 @@ interface ProductConfig {
   maxH: number;
   hasCollarGuide: boolean;
   supportsColor: boolean;
+  supportsBack: boolean;
   hint: string;
 }
 
@@ -43,6 +45,7 @@ const PRODUCT_TEMPLATES: Record<GarmentType, ProductConfig> = {
   tshirt: {
     name: 'Remera Algodón',
     image: '/src/assets/images/tshirt_mockup_template_1790601196004.jpg',
+    backImage: '/src/assets/images/tshirt_back_mockup_1790859491807.jpg',
     defaultX: 50,
     defaultY: 44,
     defaultScale: 1.0,
@@ -50,19 +53,22 @@ const PRODUCT_TEMPLATES: Record<GarmentType, ProductConfig> = {
     maxH: 260,
     hasCollarGuide: true,
     supportsColor: true,
-    hint: 'Estampado DTF Textil frontal / pecho'
+    supportsBack: true,
+    hint: 'Estampado DTF Textil frente y espalda'
   },
   hoodie: {
     name: 'Buzo Hoodie',
     image: '/src/assets/images/clean_hoodie_mockup_1790773659857.jpg',
+    backImage: '/src/assets/images/hoodie_back_mockup_1790864114028.jpg',
     defaultX: 50,
     defaultY: 45,
     defaultScale: 0.95,
     maxW: 250,
     maxH: 250,
-    hasCollarGuide: false,
+    hasCollarGuide: true,
     supportsColor: true,
-    hint: 'Estampado limpio en pecho sin cordones'
+    supportsBack: true,
+    hint: 'Estampado en buzo hoodie frente y espalda'
   },
   mug: {
     name: 'Taza Cerámica',
@@ -74,6 +80,7 @@ const PRODUCT_TEMPLATES: Record<GarmentType, ProductConfig> = {
     maxH: 160,
     hasCollarGuide: false,
     supportsColor: false,
+    supportsBack: false,
     hint: 'Sublimación cilíndrica 11 oz'
   },
   tote: {
@@ -86,6 +93,7 @@ const PRODUCT_TEMPLATES: Record<GarmentType, ProductConfig> = {
     maxH: 240,
     hasCollarGuide: false,
     supportsColor: true,
+    supportsBack: false,
     hint: 'Lienzo ecológico de algodón'
   }
 };
@@ -120,20 +128,27 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
   // Garment mockup color
   const [garmentColor, setGarmentColor] = useState<string>('#0f172a'); // default black
 
+  // Garment view side: front or back (just like the DTF Preparer!)
+  const [garmentSide, setGarmentSide] = useState<'front' | 'back'>('front');
+
   // Fullscreen Theater Mode state
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [fullscreenZoom, setFullscreenZoom] = useState<number>(1.0);
 
-  // Close fullscreen with Escape key
+  // Close fullscreen with Escape key & Turn garment with 'F' key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'Escape' && isFullscreen) {
         setIsFullscreen(false);
+      }
+      if ((e.key === 'f' || e.key === 'F') && PRODUCT_TEMPLATES[garmentType].supportsBack && !customBackdropUrl) {
+        setGarmentSide((prev) => (prev === 'front' ? 'back' : 'front'));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen]);
+  }, [isFullscreen, garmentType, customBackdropUrl]);
 
   // Capture preview snapshot
   const [capturedSnapshotUrl, setCapturedSnapshotUrl] = useState<string | null>(null);
@@ -147,6 +162,9 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
     setGarmentType(type);
     setCustomBackdropUrl(null);
     const cfg = PRODUCT_TEMPLATES[type];
+    if (!cfg.supportsBack) {
+      setGarmentSide('front');
+    }
     setPosX(cfg.defaultX);
     setPosY(cfg.defaultY);
     setScale(cfg.defaultScale);
@@ -165,17 +183,20 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
     reader.readAsDataURL(file);
   };
 
-  // Pre-configured Placement Presets
+  // Pre-configured Placement Presets (automatically adjusts front vs back!)
   const applyPreset = (preset: 'chest_pocket' | 'front_center' | 'back_full') => {
     if (preset === 'chest_pocket') {
+      setGarmentSide('front');
       setPosX(38);
       setPosY(32);
       setScale(0.45);
     } else if (preset === 'front_center') {
+      setGarmentSide('front');
       setPosX(50);
       setPosY(42);
       setScale(0.85);
     } else if (preset === 'back_full') {
+      setGarmentSide('back');
       setPosX(50);
       setPosY(46);
       setScale(1.2);
@@ -194,6 +215,11 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
     canvas.height = 1200;
 
     const currentConfig = PRODUCT_TEMPLATES[garmentType];
+    const backdropSource = customBackdropUrl
+      ? customBackdropUrl
+      : (garmentSide === 'back' && currentConfig.supportsBack && currentConfig.backImage)
+        ? currentConfig.backImage
+        : currentConfig.image;
 
     const renderComposite = (backdropImg: HTMLImageElement) => {
       // 1. Draw base color background if using standard template with color support
@@ -238,7 +264,10 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '700 24px "Plus Jakarta Sans", sans-serif';
-        ctx.fillText(`MOCKUP DE PRODUCCIÓN · ${currentConfig.name.toUpperCase()}`, 40, canvas.height - 48);
+        const sideWatermark = currentConfig.supportsBack
+          ? (garmentSide === 'back' ? ' · VISTA ESPALDA' : ' · VISTA FRENTE')
+          : '';
+        ctx.fillText(`MOCKUP DE PRODUCCIÓN · ${currentConfig.name.toUpperCase()}${sideWatermark}`, 40, canvas.height - 48);
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '500 16px "Plus Jakarta Sans", sans-serif';
@@ -253,7 +282,7 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
     const bgImg = new Image();
     bgImg.crossOrigin = 'anonymous';
     bgImg.onload = () => renderComposite(bgImg);
-    bgImg.src = customBackdropUrl || currentConfig.image;
+    bgImg.src = backdropSource;
   };
 
   const downloadSnapshot = () => {
@@ -265,6 +294,11 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
   };
 
   const currentTemplate = PRODUCT_TEMPLATES[garmentType];
+  const activeBackdropImage = customBackdropUrl
+    ? customBackdropUrl
+    : (garmentSide === 'back' && currentTemplate.supportsBack && currentTemplate.backImage)
+      ? currentTemplate.backImage
+      : currentTemplate.image;
 
   return (
     <div className="flex flex-col xl:flex-row h-full w-full gap-4 p-4 text-slate-200">
@@ -344,27 +378,63 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                 className="hidden"
               />
             </div>
+
+            {/* Front / Back Toggle for Clothing (Remera / Buzo) */}
+            {currentTemplate.supportsBack && !customBackdropUrl && (
+              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-medium">
+                <button
+                  onClick={() => setGarmentSide('front')}
+                  className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                    garmentSide === 'front'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Vista Frontal de la prenda"
+                >
+                  <Shirt className="w-3.5 h-3.5" />
+                  <span>Frente</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setGarmentSide('back');
+                    if (posY < 35) setPosY(44);
+                  }}
+                  className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                    garmentSide === 'back'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Poner la prenda de espalda"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  <span>Espalda</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             {/* Quick Placement Presets */}
-            {garmentType === 'tshirt' && (
+            {currentTemplate.supportsBack && !customBackdropUrl && (
               <div className="hidden sm:flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs">
                 <button
                   onClick={() => applyPreset('chest_pocket')}
                   className="px-2.5 py-1 rounded text-slate-400 hover:text-white transition-colors"
+                  title="Bolsillo frente"
                 >
                   Bolsillo
                 </button>
                 <button
                   onClick={() => applyPreset('front_center')}
                   className="px-2.5 py-1 rounded text-slate-400 hover:text-white transition-colors"
+                  title="Pecho centro frente"
                 >
                   Pecho Centro
                 </button>
                 <button
                   onClick={() => applyPreset('back_full')}
                   className="px-2.5 py-1 rounded text-slate-400 hover:text-white transition-colors"
+                  title="Poner de espalda e imprimir A3"
                 >
                   Espalda A3
                 </button>
@@ -424,6 +494,40 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
               <span className="hidden sm:inline">Vista Completa</span>
             </button>
 
+            {/* Interactive Turn Garment Button directly on mockup */}
+            {currentTemplate.supportsBack && !customBackdropUrl && (
+              <button
+                onClick={() => {
+                  const next = garmentSide === 'front' ? 'back' : 'front';
+                  setGarmentSide(next);
+                  if (next === 'back' && posY < 35) {
+                    setPosY(44);
+                  }
+                }}
+                className="absolute top-3 left-3 z-30 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 text-xs font-bold shadow-lg flex items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95"
+                title={`Girar ${currentTemplate.name} para ver ${garmentSide === 'front' ? 'Espalda' : 'Frente'} (F)`}
+              >
+                <RotateCw className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Girar a {garmentSide === 'front' ? 'Espalda' : 'Frente'}</span>
+              </button>
+            )}
+
+            {/* Floating View Badge (Frente / Espalda) */}
+            {currentTemplate.supportsBack && !customBackdropUrl && (
+              <div className="absolute top-3 left-36 sm:left-40 z-20 pointer-events-none hidden sm:block">
+                <span
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border shadow-md flex items-center gap-1.5 backdrop-blur-md transition-all ${
+                    garmentSide === 'front'
+                      ? 'bg-slate-950/85 text-indigo-300 border-indigo-500/50'
+                      : 'bg-indigo-950/90 text-amber-300 border-amber-500/60 ring-1 ring-amber-400/30'
+                  }`}
+                >
+                  <Shirt className="w-3.5 h-3.5" />
+                  <span>{garmentSide === 'front' ? 'VISTA FRENTE' : 'VISTA ESPALDA'}</span>
+                </span>
+              </div>
+            )}
+
             {/* Garment Base Layer with realistic color tint */}
             <div
               className="absolute inset-0 transition-colors duration-300"
@@ -436,11 +540,11 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
               }}
             />
 
-            {/* High-res generated product template texture or custom uploaded backdrop */}
+            {/* High-res generated product template texture (dynamically switches between FRONT and BACK) */}
             <img
-              key={customBackdropUrl || currentTemplate.image}
-              src={customBackdropUrl || currentTemplate.image}
-              alt={currentTemplate.name}
+              key={activeBackdropImage}
+              src={activeBackdropImage}
+              alt={`${currentTemplate.name} ${garmentSide}`}
               className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
                 customBackdropUrl
                   ? 'opacity-100 object-cover'
@@ -459,13 +563,21 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
               </div>
             )}
 
-            {/* Collar Seam reference (for t-shirts only) */}
+            {/* Collar Seam reference (for apparel) - switches between front scoop and back high neck */}
             {showPlacementRuler && currentTemplate.hasCollarGuide && !customBackdropUrl && (
-              <div className="absolute top-[16%] left-1/2 -translate-x-1/2 w-36 border-b-2 border-indigo-400/50 rounded-b-full pointer-events-none z-10">
-                <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-indigo-300/80 bg-slate-950/80 px-1 rounded border border-indigo-500/20">
-                  Costura Cuello
-                </span>
-              </div>
+              garmentSide === 'front' ? (
+                <div className="absolute top-[16%] left-1/2 -translate-x-1/2 w-36 border-b-2 border-indigo-400/50 rounded-b-full pointer-events-none z-10">
+                  <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-indigo-300/80 bg-slate-950/80 px-1 rounded border border-indigo-500/20">
+                    Costura Cuello
+                  </span>
+                </div>
+              ) : (
+                <div className="absolute top-[12%] left-1/2 -translate-x-1/2 w-32 border-b-2 border-dashed border-amber-400/60 pointer-events-none z-10">
+                  <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-amber-300/80 bg-slate-950/80 px-1 rounded border border-amber-500/20">
+                    Costura Nuca / Espalda
+                  </span>
+                </div>
+              )
             )}
 
             {/* Graphic Print Layer positioned on product - 100% Crisp on black garments! */}
@@ -584,6 +696,45 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
         </div>
 
         <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
+          {/* Lado de Estampa (Frente vs Espalda) for Apparel */}
+          {currentTemplate.supportsBack && !customBackdropUrl && (
+            <div className="space-y-1.5 p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
+              <div className="flex items-center justify-between">
+                <label className="text-slate-300 font-medium">Lado de Estampa</label>
+                <span className="text-[10px] font-bold text-indigo-400 uppercase px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-700">
+                  {garmentSide === 'front' ? 'Frente' : 'Espalda'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => setGarmentSide('front')}
+                  className={`py-1.5 px-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                    garmentSide === 'front'
+                      ? 'bg-indigo-600 text-white border-indigo-400 shadow-sm ring-1 ring-indigo-400/50'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Shirt className="w-3.5 h-3.5" />
+                  <span>Frente</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setGarmentSide('back');
+                    if (posY < 35) setPosY(44);
+                  }}
+                  className={`py-1.5 px-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                    garmentSide === 'back'
+                      ? 'bg-indigo-600 text-white border-indigo-400 shadow-sm ring-1 ring-indigo-400/50'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  <span>Espalda</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Blend Mode Selection */}
           <div className="space-y-1.5">
             <label className="text-slate-300 font-medium block">Fusión con la Tela</label>
@@ -744,6 +895,39 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
               ))}
             </div>
 
+            {/* Front / Back Toggle for Apparel inside Fullscreen */}
+            {currentTemplate.supportsBack && !customBackdropUrl && (
+              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-medium">
+                <button
+                  onClick={() => setGarmentSide('front')}
+                  className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1 ${
+                    garmentSide === 'front'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Vista Frontal"
+                >
+                  <Shirt className="w-3.5 h-3.5" />
+                  <span>Frente</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setGarmentSide('back');
+                    if (posY < 35) setPosY(44);
+                  }}
+                  className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1 ${
+                    garmentSide === 'back'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Poner la prenda de espalda"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />
+                  <span>Espalda</span>
+                </button>
+              </div>
+            )}
+
             {/* Color Swatches inside Fullscreen */}
             {currentTemplate.supportsColor && !customBackdropUrl && (
               <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-slate-900/90 rounded-lg border border-slate-800">
@@ -862,10 +1046,45 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                 }}
               />
 
-              {/* Product template high-res texture */}
+              {/* Interactive Turn Garment Button directly in Fullscreen */}
+              {currentTemplate.supportsBack && !customBackdropUrl && (
+                <button
+                  onClick={() => {
+                    const next = garmentSide === 'front' ? 'back' : 'front';
+                    setGarmentSide(next);
+                    if (next === 'back' && posY < 35) {
+                      setPosY(44);
+                    }
+                  }}
+                  className="absolute top-4 left-4 z-30 px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 text-xs font-bold shadow-lg flex items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95"
+                  title={`Girar ${currentTemplate.name} para ver ${garmentSide === 'front' ? 'Espalda' : 'Frente'} (F)`}
+                >
+                  <RotateCw className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Girar a {garmentSide === 'front' ? 'Espalda' : 'Frente'}</span>
+                </button>
+              )}
+
+              {/* Floating View Badge in Fullscreen */}
+              {currentTemplate.supportsBack && !customBackdropUrl && (
+                <div className="absolute top-4 left-40 z-20 pointer-events-none hidden sm:block">
+                  <span
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border shadow-md flex items-center gap-1.5 backdrop-blur-md transition-all ${
+                      garmentSide === 'front'
+                        ? 'bg-slate-950/85 text-indigo-300 border-indigo-500/50'
+                        : 'bg-indigo-950/90 text-amber-300 border-amber-500/60 ring-1 ring-amber-400/30'
+                    }`}
+                  >
+                    <Shirt className="w-3.5 h-3.5" />
+                    <span>{garmentSide === 'front' ? 'VISTA FRENTE' : 'VISTA ESPALDA'}</span>
+                  </span>
+                </div>
+              )}
+
+              {/* Product template high-res texture (switches between front and back) */}
               <img
-                src={customBackdropUrl || currentTemplate.image}
-                alt={currentTemplate.name}
+                key={activeBackdropImage}
+                src={activeBackdropImage}
+                alt={`${currentTemplate.name} ${garmentSide}`}
                 className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
                   customBackdropUrl
                     ? 'opacity-100 object-cover'
@@ -884,13 +1103,21 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                 </div>
               )}
 
-              {/* Collar Seam reference (for t-shirts only) */}
+              {/* Collar Seam reference (for apparel) - switches front scoop and back high neck */}
               {showPlacementRuler && currentTemplate.hasCollarGuide && !customBackdropUrl && (
-                <div className="absolute top-[16%] left-1/2 -translate-x-1/2 w-36 border-b-2 border-indigo-400/50 rounded-b-full pointer-events-none z-10">
-                  <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-indigo-300/80 bg-slate-950/80 px-1 rounded border border-indigo-500/20">
-                    Costura Cuello
-                  </span>
-                </div>
+                garmentSide === 'front' ? (
+                  <div className="absolute top-[16%] left-1/2 -translate-x-1/2 w-36 border-b-2 border-indigo-400/50 rounded-b-full pointer-events-none z-10">
+                    <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-indigo-300/80 bg-slate-950/80 px-1 rounded border border-indigo-500/20">
+                      Costura Cuello
+                    </span>
+                  </div>
+                ) : (
+                  <div className="absolute top-[12%] left-1/2 -translate-x-1/2 w-32 border-b-2 border-dashed border-amber-400/60 pointer-events-none z-10">
+                    <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-amber-300/80 bg-slate-950/80 px-1 rounded border border-amber-500/20">
+                      Costura Nuca / Espalda
+                    </span>
+                  </div>
+                )
               )}
 
               {/* Side Blueprint Measurement Bracket */}
