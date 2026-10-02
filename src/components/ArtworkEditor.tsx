@@ -81,6 +81,34 @@ import {
   SUBLIMATION_PRESETS
 } from '../utils/imageProcessing';
 
+export const GARMENT_COLOR_TEMPLATES: Record<string, { front: string; back: string; name: string }> = {
+  '#0f172a': {
+    name: 'Negro Carbón',
+    front: '/src/assets/images/black_tshirt_front_1790943082198.jpg',
+    back: '/src/assets/images/black_tshirt_back_1790943099560.jpg'
+  },
+  '#ffffff': {
+    name: 'Blanco Puro',
+    front: '/src/assets/images/white_tshirt_front_1790946146673.jpg',
+    back: '/src/assets/images/white_tshirt_back_1790946159333.jpg'
+  },
+  '#1e3a8a': {
+    name: 'Azul Marino',
+    front: '/src/assets/images/navy_tshirt_front_1790946170917.jpg',
+    back: '/src/assets/images/navy_tshirt_back_1790946181513.jpg'
+  },
+  '#374151': {
+    name: 'Gris Melange',
+    front: '/src/assets/images/gray_tshirt_front_1790946192852.jpg',
+    back: '/src/assets/images/gray_tshirt_back_1790946204089.jpg'
+  },
+  '#991b1b': {
+    name: 'Rojo Carmesí',
+    front: '/src/assets/images/red_tshirt_front_1790946215588.jpg',
+    back: '/src/assets/images/red_tshirt_back_1790946229966.jpg'
+  }
+};
+
 interface ArtworkEditorProps {
   onSendToNesting?: (artwork: { name: string; url: string; widthCm: number; heightCm: number }) => void;
   onOpenAR?: (url: string) => void;
@@ -175,11 +203,14 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
   };
 
   const getFingerEquivalence = (cm: number) => {
-    if (cm <= 3) return '1 a 2 dedos';
+    if (cm <= 3) return '1 a 2 dedos (cuello alto)';
     if (cm <= 5.5) return '2 a 3 dedos (juvenil/alto)';
     if (cm <= 8) return '3 a 4 dedos (estándar adultos)';
     if (cm <= 11) return '4 a 5 dedos (escote bajo)';
-    return 'Más de 5 dedos (corte bajo)';
+    if (cm <= 20) return 'Zona media / pecho';
+    if (cm <= 35) return 'Zona media / torso';
+    if (cm <= 48) return 'Zona baja / abdomen';
+    return 'Dobladillo inferior / cintura';
   };
 
   type PlacementPresetId =
@@ -187,9 +218,12 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
     | 'chest_high'
     | 'left_pocket'
     | 'right_pocket'
+    | 'left_sleeve'
+    | 'right_sleeve'
+    | 'hem_left'
+    | 'hem_right'
     | 'oversize_front'
     | 'belly_center'
-    | 'hem_lateral'
     | 'back_yoke'
     | 'back_high'
     | 'back_center'
@@ -197,78 +231,130 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
     | 'back_lumbar';
 
   const applyPlacementPreset = (preset: PlacementPresetId) => {
+    pushSnapshot();
+    const aspect = pixelHeight / pixelWidth;
+
+    const setProportionalSize = (boxW: number, boxH: number) => {
+      if (aspect >= 1) {
+        // Altura manda
+        const h = boxH;
+        const w = Math.round((h / aspect) * 10) / 10;
+        setTargetWidthCm(Math.min(w, boxW));
+        setTargetHeightCm(h);
+      } else {
+        // Ancho manda
+        const w = boxW;
+        const h = Math.round((w * aspect) * 10) / 10;
+        setTargetWidthCm(w);
+        setTargetHeightCm(Math.min(h, boxH));
+      }
+    };
+
     switch (preset) {
+      case 'left_pocket':
+        setPlacementDistanceCm(8.5);
+        setPlacementOffsetXCm(-9.5);
+        setGarmentSide('front');
+        setProportionalSize(10, 10);
+        showToast('📍 Bolsillo Izq. (10 × 10 cm)');
+        break;
+      case 'right_pocket':
+        setPlacementDistanceCm(8.5);
+        setPlacementOffsetXCm(9.5);
+        setGarmentSide('front');
+        setProportionalSize(10, 10);
+        showToast('📍 Bolsillo Der. (10 × 10 cm)');
+        break;
+      case 'left_sleeve':
+        setPlacementDistanceCm(13.5);
+        setPlacementOffsetXCm(-28.5);
+        setGarmentSide('front');
+        setProportionalSize(8, 8);
+        showToast('📍 Manga Izquierda (8 × 8 cm · bíceps)');
+        break;
+      case 'right_sleeve':
+        setPlacementDistanceCm(13.5);
+        setPlacementOffsetXCm(28.5);
+        setGarmentSide('front');
+        setProportionalSize(8, 8);
+        showToast('📍 Manga Derecha (8 × 8 cm · bíceps)');
+        break;
+      case 'hem_left':
+        setPlacementDistanceCm(56.0);
+        setPlacementOffsetXCm(-18.0);
+        setGarmentSide('front');
+        setProportionalSize(6, 6);
+        showToast('📍 Dobladillo Inferior Izquierdo (6 × 6 cm · bajo)');
+        break;
+      case 'hem_right':
+        setPlacementDistanceCm(56.0);
+        setPlacementOffsetXCm(18.0);
+        setGarmentSide('front');
+        setProportionalSize(6, 6);
+        showToast('📍 Dobladillo Inferior Derecho (6 × 6 cm · bajo)');
+        break;
       case 'chest_center':
         setPlacementDistanceCm(7.5);
         setPlacementOffsetXCm(0);
         setGarmentSide('front');
-        showToast('Ubicación: Pecho Centro (7.5 cm · 3-4 dedos)');
+        setProportionalSize(28, 28);
+        showToast('📍 Pecho Centro Estándar (28 × 28 cm · 3-4 dedos)');
         break;
       case 'chest_high':
         setPlacementDistanceCm(5.0);
         setPlacementOffsetXCm(0);
         setGarmentSide('front');
-        showToast('Ubicación: Pecho Alto / Juvenil (5 cm)');
-        break;
-      case 'left_pocket':
-        setPlacementDistanceCm(9.0);
-        setPlacementOffsetXCm(-9.5);
-        setGarmentSide('front');
-        showToast('Ubicación: Bolsillo Pecho Izquierdo (-9.5 cm)');
-        break;
-      case 'right_pocket':
-        setPlacementDistanceCm(9.0);
-        setPlacementOffsetXCm(9.5);
-        setGarmentSide('front');
-        showToast('Ubicación: Pecho Derecho (+9.5 cm)');
+        setProportionalSize(22, 16);
+        showToast('📍 Pecho Alto / Juvenil (22 × 16 cm · 2 dedos)');
         break;
       case 'oversize_front':
         setPlacementDistanceCm(11.5);
         setPlacementOffsetXCm(0);
         setGarmentSide('front');
-        showToast('Ubicación: Estampa Streetwear Oversize (11.5 cm)');
+        setProportionalSize(32, 40);
+        showToast('📍 Streetwear Oversize (32 × 40 cm)');
         break;
       case 'belly_center':
         setPlacementDistanceCm(18.0);
         setPlacementOffsetXCm(0);
         setGarmentSide('front');
-        showToast('Ubicación: Zona Baja / Abdomen (18 cm)');
-        break;
-      case 'hem_lateral':
-        setPlacementDistanceCm(22.0);
-        setPlacementOffsetXCm(-11.0);
-        setGarmentSide('front');
-        showToast('Ubicación: Dobladillo Lateral (22 cm)');
+        setProportionalSize(26, 20);
+        showToast('📍 Zona Baja / Abdomen (26 × 20 cm)');
         break;
       case 'back_yoke':
         setPlacementDistanceCm(3.5);
         setPlacementOffsetXCm(0);
         setGarmentSide('back');
-        showToast('Ubicación: Nuca / Logo Cuello (3.5 cm · 1-2 dedos)');
+        setProportionalSize(8, 5);
+        showToast('📍 Nuca / Logo Cuello (8 × 5 cm · 1-2 dedos)');
         break;
       case 'back_high':
         setPlacementDistanceCm(5.5);
         setPlacementOffsetXCm(0);
         setGarmentSide('back');
-        showToast('Ubicación: Espalda Alta (5.5 cm)');
+        setProportionalSize(28, 14);
+        showToast('📍 Espalda Alta (28 × 14 cm)');
         break;
       case 'back_center':
         setPlacementDistanceCm(9.0);
         setPlacementOffsetXCm(0);
         setGarmentSide('back');
-        showToast('Ubicación: Espalda Omóplatos (9 cm · 4 dedos)');
+        setProportionalSize(28, 24);
+        showToast('📍 Espalda Omóplatos (28 × 24 cm)');
         break;
       case 'back_full':
-        setPlacementDistanceCm(12.0);
+        setPlacementDistanceCm(11.0);
         setPlacementOffsetXCm(0);
         setGarmentSide('back');
-        showToast('Ubicación: Espalda Completa A3 (12 cm)');
+        setProportionalSize(29, 38);
+        showToast('📍 Espalda Completa A3 (29 × 38 cm)');
         break;
       case 'back_lumbar':
         setPlacementDistanceCm(22.0);
         setPlacementOffsetXCm(0);
         setGarmentSide('back');
-        showToast('Ubicación: Espalda Baja / Lumbar (22 cm)');
+        setProportionalSize(28, 16);
+        showToast('📍 Espalda Baja / Lumbar (28 × 16 cm)');
         break;
     }
   };
@@ -489,7 +575,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         pushSnapshot();
-        setPlacementDistanceCm((prev) => Math.min(25, Math.round((prev + step) * 10) / 10));
+        setPlacementDistanceCm((prev) => Math.min(60, Math.round((prev + step) * 10) / 10));
         if (viewSplit !== 'on_garment') setViewSplit('on_garment');
         return;
       }
@@ -497,7 +583,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         pushSnapshot();
-        setPlacementOffsetXCm((prev) => Math.max(-18, Math.round((prev - step) * 10) / 10));
+        setPlacementOffsetXCm((prev) => Math.max(-32, Math.round((prev - step) * 10) / 10));
         if (viewSplit !== 'on_garment') setViewSplit('on_garment');
         return;
       }
@@ -505,7 +591,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
       if (e.key === 'ArrowRight') {
         e.preventDefault();
         pushSnapshot();
-        setPlacementOffsetXCm((prev) => Math.min(18, Math.round((prev + step) * 10) / 10));
+        setPlacementOffsetXCm((prev) => Math.min(32, Math.round((prev + step) * 10) / 10));
         if (viewSplit !== 'on_garment') setViewSplit('on_garment');
         return;
       }
@@ -1723,14 +1809,19 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
 
                       {/* Color Prenda Swatches */}
                       <div className="pt-1.5 border-t border-slate-800 space-y-1">
-                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide block">Color Prenda</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide block">Color Prenda</span>
+                          <span className="text-[9px] text-slate-300 font-medium">
+                            {GARMENT_COLOR_TEMPLATES[previewBgColor]?.name || 'Negro Carbón'}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1">
                           {[
                             { hex: '#0f172a', name: 'Negro' },
                             { hex: '#ffffff', name: 'Blanco' },
                             { hex: '#1e3a8a', name: 'Azul Marino' },
-                            { hex: '#7f1d1d', name: 'Bordó' },
-                            { hex: '#374151', name: 'Gris' }
+                            { hex: '#374151', name: 'Gris Melange' },
+                            { hex: '#991b1b', name: 'Rojo Carmesí' }
                           ].map((swatch) => (
                             <button
                               key={swatch.hex}
@@ -1738,13 +1829,13 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                 setPreviewBgColor(swatch.hex);
                                 setHalftoneConfig((prev) => ({ ...prev, garmentColor: swatch.hex }));
                                 setKnockoutConfig((prev) => ({ ...prev, targetColor: swatch.hex }));
-                                showToast(`Prenda: ${swatch.name}`);
+                                showToast(`Camiseta cambiada a: ${swatch.name}`);
                               }}
-                              title={`Prenda ${swatch.name}`}
+                              title={`Camiseta ${swatch.name}`}
                               style={{ backgroundColor: swatch.hex }}
                               className={`flex-1 h-5 rounded border transition-all cursor-pointer ${
                                 previewBgColor === swatch.hex
-                                  ? 'border-indigo-400 ring-1 ring-indigo-500/50 scale-105 shadow-sm'
+                                  ? 'border-indigo-400 ring-2 ring-indigo-500/70 scale-105 shadow-sm'
                                   : 'border-slate-700 hover:border-slate-500'
                               }`}
                             />
@@ -1813,9 +1904,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                       const chestWidth = GARMENT_CHEST_WIDTH_CM[garmentSize];
                       const pxPerCm = (480 * 0.70) / chestWidth;
                       const collarY = garmentSide === 'front' ? 88 : 80;
-                      const newDistCm = Math.max(1, Math.min(25, (mouseY - collarY) / pxPerCm));
+                      const newDistCm = Math.max(1, Math.min(60, (mouseY - collarY) / pxPerCm));
                       const centerX = 240;
-                      const newOffsetCm = Math.max(-18, Math.min(18, (mouseX - centerX) / pxPerCm));
+                      const newOffsetCm = Math.max(-32, Math.min(32, (mouseX - centerX) / pxPerCm));
                       setPlacementDistanceCm(Math.round(newDistCm * 10) / 10);
                       setPlacementOffsetXCm(Math.round(newOffsetCm * 10) / 10);
                     }}
@@ -1849,18 +1940,19 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                       <span>Girar a {garmentSide === 'front' ? 'Espalda' : 'Frente'}</span>
                     </button>
 
-                    {/* Real cotton t-shirt texture - switches dynamically between FRONT and BACK mockup */}
-                    <img
-                      key={garmentSide}
-                      src={
-                        garmentSide === 'front'
-                          ? '/src/assets/images/tshirt_mockup_template_1790601196004.jpg'
-                          : '/src/assets/images/tshirt_back_mockup_1790859491807.jpg'
-                      }
-                      alt={garmentSide === 'front' ? 'Remera Vista Frente' : 'Remera Vista Espalda'}
-                      className="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-90 pointer-events-none transition-all duration-300 animate-in fade-in"
-                      style={{ transform: 'scale(1.02)' }}
-                    />
+                    {/* Real cotton t-shirt texture - switches dynamically between FRONT and BACK mockup and selected COLOR */}
+                    {(() => {
+                      const colorTemplate = GARMENT_COLOR_TEMPLATES[previewBgColor] || GARMENT_COLOR_TEMPLATES['#0f172a'];
+                      const activeImage = garmentSide === 'front' ? colorTemplate.front : colorTemplate.back;
+                      return (
+                        <img
+                          key={`${previewBgColor}_${garmentSide}`}
+                          src={activeImage}
+                          alt={`Remera ${colorTemplate.name} ${garmentSide === 'front' ? 'Frente' : 'Espalda'}`}
+                          className="absolute inset-0 w-full h-full object-cover pointer-events-none transition-all duration-300 animate-in fade-in"
+                        />
+                      );
+                    })()}
 
                     {/* Subtle Collar Seam Guideline - Front scoop vs Back high neck */}
                     {garmentSide === 'front' ? (
@@ -2016,16 +2108,16 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                         <div className="bg-slate-900/85 border border-slate-800 rounded-xl p-2.5 space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">
-                              Ubicaciones Típicas
+                              Ubicaciones y Tamaños
                             </span>
-                            <span className="text-[9px] text-indigo-400 font-mono font-semibold">12 Estándares</span>
+                            <span className="text-[9px] text-indigo-400 font-mono font-semibold">Estándares DTF</span>
                           </div>
 
-                          {/* Frente */}
+                          {/* Frente & Pecho */}
                           <div>
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                                Frente
+                                Pecho & Frente
                               </span>
                               {garmentSide === 'front' && (
                                 <span className="text-[9px] text-emerald-400 font-bold bg-emerald-950/60 px-1 rounded">Activo</span>
@@ -2039,9 +2131,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Pecho Centro (7.5 cm - 3 a 4 dedos)"
+                                title="Pecho Centro Estándar (28 × 28 cm)"
                               >
-                                Pecho Centro <span className="text-[9px] text-yellow-400 font-mono block">7.5 cm</span>
+                                Pecho Centro <span className="text-[9px] text-yellow-400 font-mono block">28 × 28 cm</span>
                               </button>
                               <button
                                 onClick={() => applyPlacementPreset('chest_high')}
@@ -2050,31 +2142,31 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Pecho Alto / Juvenil (5.0 cm)"
+                                title="Pecho Alto / Juvenil (22 × 16 cm)"
                               >
-                                Pecho Alto <span className="text-[9px] text-yellow-400 font-mono block">5.0 cm</span>
+                                Pecho Alto <span className="text-[9px] text-yellow-400 font-mono block">22 × 16 cm</span>
                               </button>
                               <button
                                 onClick={() => applyPlacementPreset('left_pocket')}
                                 className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
-                                  garmentSide === 'front' && placementOffsetXCm === -9.5
+                                  garmentSide === 'front' && placementOffsetXCm === -9.0
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Bolsillo Izquierdo / Corazón (-9.5 cm)"
+                                title="Bolsillo Izquierdo (10 × 10 cm)"
                               >
-                                Bolsillo Izq. <span className="text-[9px] text-cyan-400 font-mono block">Corazón</span>
+                                Bolsillo Izq. <span className="text-[9px] text-cyan-400 font-mono block">10 × 10 cm</span>
                               </button>
                               <button
                                 onClick={() => applyPlacementPreset('right_pocket')}
                                 className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
-                                  garmentSide === 'front' && placementOffsetXCm === 9.5
+                                  garmentSide === 'front' && placementOffsetXCm === 9.0
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Pecho Derecho (+9.5 cm)"
+                                title="Bolsillo Derecho (10 × 10 cm)"
                               >
-                                Pecho Der. <span className="text-[9px] text-cyan-400 font-mono block">+9.5 cm</span>
+                                Bolsillo Der. <span className="text-[9px] text-cyan-400 font-mono block">10 × 10 cm</span>
                               </button>
                               <button
                                 onClick={() => applyPlacementPreset('oversize_front')}
@@ -2083,20 +2175,73 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Streetwear Oversize (11.5 cm)"
+                                title="Streetwear Oversize (32 × 40 cm)"
                               >
-                                Oversize <span className="text-[9px] text-amber-400 font-mono block">11.5 cm</span>
+                                Oversize <span className="text-[9px] text-amber-400 font-mono block">32 × 40 cm</span>
                               </button>
                               <button
-                                onClick={() => applyPlacementPreset('hem_lateral')}
+                                onClick={() => applyPlacementPreset('belly_center')}
                                 className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
-                                  garmentSide === 'front' && placementDistanceCm === 22.0
+                                  garmentSide === 'front' && placementDistanceCm === 18.0 && placementOffsetXCm === 0
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Dobladillo Lateral (22 cm / -11 cm)"
+                                title="Zona Baja / Abdomen (26 × 20 cm)"
                               >
-                                Dobladillo <span className="text-[9px] text-purple-400 font-mono block">Bajo 22 cm</span>
+                                Abdomen <span className="text-[9px] text-purple-400 font-mono block">26 × 20 cm</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Mangas & Dobladillos */}
+                          <div className="pt-2 border-t border-slate-800">
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">
+                              Mangas & Dobladillos
+                            </span>
+                            <div className="grid grid-cols-2 gap-1 text-[11px]">
+                              <button
+                                onClick={() => applyPlacementPreset('left_sleeve')}
+                                className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
+                                  garmentSide === 'front' && placementOffsetXCm === -28.5
+                                    ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                                    : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
+                                }`}
+                                title="Manga Izquierda (8 × 8 cm)"
+                              >
+                                Manga Izq. <span className="text-[9px] text-emerald-400 font-mono block">8 × 8 cm</span>
+                              </button>
+                              <button
+                                onClick={() => applyPlacementPreset('right_sleeve')}
+                                className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
+                                  garmentSide === 'front' && placementOffsetXCm === 28.5
+                                    ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                                    : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
+                                }`}
+                                title="Manga Derecha (8 × 8 cm)"
+                              >
+                                Manga Der. <span className="text-[9px] text-emerald-400 font-mono block">8 × 8 cm</span>
+                              </button>
+                              <button
+                                onClick={() => applyPlacementPreset('hem_left')}
+                                className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
+                                  garmentSide === 'front' && placementDistanceCm >= 50 && placementOffsetXCm < 0
+                                    ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                                    : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
+                                }`}
+                                title="Dobladillo Inferior Izquierdo (6 × 6 cm)"
+                              >
+                                Dobladillo Izq. <span className="text-[9px] text-pink-400 font-mono block">6 × 6 cm</span>
+                              </button>
+                              <button
+                                onClick={() => applyPlacementPreset('hem_right')}
+                                className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
+                                  garmentSide === 'front' && placementDistanceCm >= 50 && placementOffsetXCm > 0
+                                    ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                                    : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
+                                }`}
+                                title="Dobladillo Inferior Derecho (6 × 6 cm)"
+                              >
+                                Dobladillo Der. <span className="text-[9px] text-pink-400 font-mono block">6 × 6 cm</span>
                               </button>
                             </div>
                           </div>
@@ -2119,9 +2264,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Nuca / Logo Cuello (3.5 cm - 1 a 2 dedos)"
+                                title="Nuca / Logo Cuello (8 × 5 cm)"
                               >
-                                Nuca / Cuello <span className="text-[9px] text-indigo-400 font-mono block">3.5 cm</span>
+                                Nuca / Logo <span className="text-[9px] text-indigo-400 font-mono block">8 × 5 cm</span>
                               </button>
                               <button
                                 onClick={() => applyPlacementPreset('back_high')}
@@ -2130,9 +2275,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Espalda Alta (5.5 cm)"
+                                title="Espalda Alta (28 × 14 cm)"
                               >
-                                Espalda Alta <span className="text-[9px] text-indigo-400 font-mono block">5.5 cm</span>
+                                Espalda Alta <span className="text-[9px] text-indigo-400 font-mono block">28 × 14 cm</span>
                               </button>
                               <button
                                 onClick={() => applyPlacementPreset('back_center')}
@@ -2141,20 +2286,20 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Espalda Omóplatos (9.0 cm)"
+                                title="Espalda Omóplatos (28 × 24 cm)"
                               >
-                                Omóplatos <span className="text-[9px] text-indigo-400 font-mono block">9.0 cm</span>
+                                Omóplatos <span className="text-[9px] text-indigo-400 font-mono block">28 × 24 cm</span>
                               </button>
                               <button
                                 onClick={() => applyPlacementPreset('back_full')}
                                 className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
-                                  garmentSide === 'back' && placementDistanceCm === 12.0
+                                  garmentSide === 'back' && placementDistanceCm === 11.0
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Espalda Completa A3 (12.0 cm)"
+                                title="Espalda Completa A3 (29 × 38 cm)"
                               >
-                                Espalda A3 <span className="text-[9px] text-indigo-400 font-mono block">12.0 cm</span>
+                                Espalda A3 <span className="text-[9px] text-indigo-400 font-mono block">29 × 38 cm</span>
                               </button>
                               <button
                                 onClick={() => applyPlacementPreset('back_lumbar')}
@@ -2163,9 +2308,9 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
-                                title="Espalda Baja / Lumbar (22.0 cm)"
+                                title="Espalda Baja / Lumbar (28 × 16 cm)"
                               >
-                                Espalda Baja / Lumbar <span className="text-[9px] text-indigo-400 font-mono inline ml-1.5">(22 cm)</span>
+                                Espalda Baja / Lumbar <span className="text-[9px] text-indigo-400 font-mono inline ml-1.5">(28 × 16 cm)</span>
                               </button>
                             </div>
                           </div>
@@ -3449,17 +3594,17 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                   <span className="text-[10px] text-indigo-400 font-mono">12 Preajustes</span>
                 </div>
 
-                {/* Frente */}
+                {/* Frente & Pecho */}
                 <div className="space-y-1">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Frente</span>
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Pecho & Frente</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     {[
-                      { id: 'chest_center', label: 'Pecho Central', note: '7.5 cm (3-4 dedos)' },
-                      { id: 'chest_high', label: 'Pecho Alto', note: '5.0 cm (Juvenil/Mujer)' },
-                      { id: 'left_pocket', label: 'Bolsillo / Pecho Izq', note: '-9.5 cm lateral' },
-                      { id: 'right_pocket', label: 'Pecho Derecho', note: '+9.5 cm lateral' },
-                      { id: 'oversize_front', label: 'Streetwear Oversize', note: '11.5 cm bajo' },
-                      { id: 'hem_lateral', label: 'Dobladillo Lateral', note: '22 cm bajo' },
+                      { id: 'chest_center', label: 'Pecho Centro', note: '28 × 28 cm · 7.5 cm' },
+                      { id: 'chest_high', label: 'Pecho Alto', note: '22 × 16 cm · 5.0 cm' },
+                      { id: 'left_pocket', label: 'Bolsillo Izq.', note: '10 × 10 cm · -9.0 cm' },
+                      { id: 'right_pocket', label: 'Bolsillo Der.', note: '10 × 10 cm · +9.0 cm' },
+                      { id: 'oversize_front', label: 'Oversize', note: '32 × 40 cm · 11.5 cm' },
+                      { id: 'belly_center', label: 'Zona Abdomen', note: '26 × 20 cm · 18.0 cm' },
                     ].map((p) => (
                       <button
                         key={p.id}
@@ -3471,10 +3616,43 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                           garmentSide === 'front' &&
                           ((p.id === 'chest_center' && placementDistanceCm === 7.5 && placementOffsetXCm === 0) ||
                             (p.id === 'chest_high' && placementDistanceCm === 5.0 && placementOffsetXCm === 0) ||
-                            (p.id === 'left_pocket' && placementOffsetXCm === -9.5) ||
-                            (p.id === 'right_pocket' && placementOffsetXCm === 9.5) ||
+                            (p.id === 'left_pocket' && placementOffsetXCm === -9.0) ||
+                            (p.id === 'right_pocket' && placementOffsetXCm === 9.0) ||
                             (p.id === 'oversize_front' && placementDistanceCm === 11.5) ||
-                            (p.id === 'hem_lateral' && placementDistanceCm === 22.0))
+                            (p.id === 'belly_center' && placementDistanceCm === 18.0))
+                            ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                            : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
+                        }`}
+                      >
+                        <span className="block font-semibold">{p.label}</span>
+                        <span className="text-[9px] text-slate-400 block font-mono">{p.note}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mangas & Dobladillos */}
+                <div className="space-y-1 pt-1.5 border-t border-slate-800/80">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Mangas & Dobladillos</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { id: 'left_sleeve', label: 'Manga Izquierda', note: '8 × 8 cm · bíceps' },
+                      { id: 'right_sleeve', label: 'Manga Derecha', note: '8 × 8 cm · bíceps' },
+                      { id: 'hem_left', label: 'Dobladillo Izq.', note: '6 × 6 cm · bajo' },
+                      { id: 'hem_right', label: 'Dobladillo Der.', note: '6 × 6 cm · bajo' },
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          applyPlacementPreset(p.id as any);
+                          setViewSplit('on_garment');
+                        }}
+                        className={`px-2.5 py-1.5 rounded-md font-medium text-[11px] border transition-colors text-left truncate ${
+                          garmentSide === 'front' &&
+                          ((p.id === 'left_sleeve' && placementOffsetXCm === -28.5) ||
+                            (p.id === 'right_sleeve' && placementOffsetXCm === 28.5) ||
+                            (p.id === 'hem_left' && placementDistanceCm >= 50 && placementOffsetXCm < 0) ||
+                            (p.id === 'hem_right' && placementDistanceCm >= 50 && placementOffsetXCm > 0))
                             ? 'bg-indigo-600/30 border-indigo-500 text-white'
                             : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
                         }`}
@@ -3491,11 +3669,11 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Espalda</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     {[
-                      { id: 'back_yoke', label: 'Nuca / Logo Cuello', note: '3.5 cm (1-2 dedos)' },
-                      { id: 'back_high', label: 'Espalda Alta', note: '5.5 cm estándar' },
-                      { id: 'back_center', label: 'Omóplatos / Centro', note: '9.0 cm (4 dedos)' },
-                      { id: 'back_full', label: 'Espalda Completa A3', note: '12.0 cm póster' },
-                      { id: 'back_lumbar', label: 'Espalda Baja / Lumbar', note: '22.0 cm cintura' },
+                      { id: 'back_yoke', label: 'Nuca / Logo Cuello', note: '8 × 5 cm · 3.5 cm' },
+                      { id: 'back_high', label: 'Espalda Alta', note: '28 × 14 cm · 5.5 cm' },
+                      { id: 'back_center', label: 'Omóplatos / Centro', note: '28 × 24 cm · 9.0 cm' },
+                      { id: 'back_full', label: 'Espalda Completa A3', note: '29 × 38 cm · 11.0 cm' },
+                      { id: 'back_lumbar', label: 'Espalda Baja / Lumbar', note: '28 × 16 cm · 22.0 cm' },
                     ].map((p) => (
                       <button
                         key={p.id}
@@ -3508,7 +3686,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                           ((p.id === 'back_yoke' && placementDistanceCm === 3.5) ||
                             (p.id === 'back_high' && placementDistanceCm === 5.5) ||
                             (p.id === 'back_center' && placementDistanceCm === 9.0) ||
-                            (p.id === 'back_full' && placementDistanceCm === 12.0) ||
+                            (p.id === 'back_full' && placementDistanceCm === 11.0) ||
                             (p.id === 'back_lumbar' && placementDistanceCm === 22.0))
                             ? 'bg-indigo-600/30 border-indigo-500 text-white'
                             : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
@@ -3531,8 +3709,8 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                   </div>
                   <input
                     type="range"
-                    min="2"
-                    max="22"
+                    min="1"
+                    max="60"
                     step="0.5"
                     value={placementDistanceCm}
                     onChange={(e) => {
@@ -3561,8 +3739,8 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                   </div>
                   <input
                     type="range"
-                    min="-14"
-                    max="14"
+                    min="-32"
+                    max="32"
                     step="0.5"
                     value={placementOffsetXCm}
                     onChange={(e) => {

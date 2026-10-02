@@ -127,7 +127,6 @@ Devuelve un análisis técnico profesional estructurado en formato JSON con los 
 app.post('/api/ai/design-ideas', async (req, res) => {
   try {
     const { concept, niche, style } = req.body;
-
     if (!ai) {
       return res.status(200).json({
         ideas: [

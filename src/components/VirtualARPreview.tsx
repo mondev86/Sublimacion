@@ -41,11 +41,39 @@ interface ProductConfig {
   hint: string;
 }
 
+const TSHIRT_COLOR_ASSETS: Record<string, { front: string; back: string; name: string }> = {
+  '#0f172a': {
+    name: 'Negro Carbón',
+    front: '/src/assets/images/black_tshirt_front_1790943082198.jpg',
+    back: '/src/assets/images/black_tshirt_back_1790943099560.jpg'
+  },
+  '#ffffff': {
+    name: 'Blanco Puro',
+    front: '/src/assets/images/white_tshirt_front_1790946146673.jpg',
+    back: '/src/assets/images/white_tshirt_back_1790946159333.jpg'
+  },
+  '#1e3a8a': {
+    name: 'Azul Marino',
+    front: '/src/assets/images/navy_tshirt_front_1790946170917.jpg',
+    back: '/src/assets/images/navy_tshirt_back_1790946181513.jpg'
+  },
+  '#374151': {
+    name: 'Gris Melange',
+    front: '/src/assets/images/gray_tshirt_front_1790946192852.jpg',
+    back: '/src/assets/images/gray_tshirt_back_1790946204089.jpg'
+  },
+  '#991b1b': {
+    name: 'Rojo Carmesí',
+    front: '/src/assets/images/red_tshirt_front_1790946215588.jpg',
+    back: '/src/assets/images/red_tshirt_back_1790946229966.jpg'
+  }
+};
+
 const PRODUCT_TEMPLATES: Record<GarmentType, ProductConfig> = {
   tshirt: {
     name: 'Remera Algodón',
-    image: '/src/assets/images/tshirt_mockup_template_1790601196004.jpg',
-    backImage: '/src/assets/images/tshirt_back_mockup_1790859491807.jpg',
+    image: '/src/assets/images/black_tshirt_front_1790943082198.jpg',
+    backImage: '/src/assets/images/black_tshirt_back_1790943099560.jpg',
     defaultX: 50,
     defaultY: 44,
     defaultScale: 1.0,
@@ -54,7 +82,7 @@ const PRODUCT_TEMPLATES: Record<GarmentType, ProductConfig> = {
     hasCollarGuide: true,
     supportsColor: true,
     supportsBack: true,
-    hint: 'Estampado DTF Textil frente y espalda'
+    hint: 'Remera 100% algodón sobre mesa blanca frente y espalda (5 colores reales)'
   },
   hoodie: {
     name: 'Buzo Hoodie',
@@ -198,8 +226,8 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
     } else if (preset === 'back_full') {
       setGarmentSide('back');
       setPosX(50);
-      setPosY(46);
-      setScale(1.2);
+      setPosY(44);
+      setScale(1.0);
     }
   };
 
@@ -217,16 +245,31 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
     const currentConfig = PRODUCT_TEMPLATES[garmentType];
     const backdropSource = customBackdropUrl
       ? customBackdropUrl
-      : (garmentSide === 'back' && currentConfig.supportsBack && currentConfig.backImage)
-        ? currentConfig.backImage
-        : currentConfig.image;
+      : garmentType === 'tshirt'
+        ? (TSHIRT_COLOR_ASSETS[garmentColor] || TSHIRT_COLOR_ASSETS['#0f172a'])[garmentSide === 'back' ? 'back' : 'front']
+        : (garmentSide === 'back' && currentConfig.supportsBack && currentConfig.backImage)
+          ? currentConfig.backImage
+          : currentConfig.image;
 
     const renderComposite = (backdropImg: HTMLImageElement) => {
       // 1. Draw base color background if using standard template with color support
       if (!customBackdropUrl) {
-        if (currentConfig.supportsColor) {
+        if (garmentType === 'tshirt') {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else if (currentConfig.supportsColor) {
           ctx.fillStyle = garmentColor;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Studio radial lighting halo for dark garments so black t-shirt is sharply distinguished
+          if (garmentColor === '#0f172a' || garmentColor === '#000000' || garmentColor === '#374151') {
+            const radGrad = ctx.createRadialGradient(canvas.width / 2, canvas.height * 0.46, 60, canvas.width / 2, canvas.height * 0.46, canvas.width * 0.52);
+            radGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+            radGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.07)');
+            radGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = radGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
         } else {
           ctx.fillStyle = '#f8fafc';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -234,7 +277,13 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
       }
 
       // 2. Draw template texture / custom backdrop
+      ctx.save();
+      if (!customBackdropUrl && currentConfig.supportsColor && garmentType !== 'tshirt') {
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha = 0.95;
+      }
       ctx.drawImage(backdropImg, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
 
       // 3. Draw design
       const designImg = new Image();
@@ -296,9 +345,11 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
   const currentTemplate = PRODUCT_TEMPLATES[garmentType];
   const activeBackdropImage = customBackdropUrl
     ? customBackdropUrl
-    : (garmentSide === 'back' && currentTemplate.supportsBack && currentTemplate.backImage)
-      ? currentTemplate.backImage
-      : currentTemplate.image;
+    : garmentType === 'tshirt'
+      ? (TSHIRT_COLOR_ASSETS[garmentColor] || TSHIRT_COLOR_ASSETS['#0f172a'])[garmentSide === 'back' ? 'back' : 'front']
+      : (garmentSide === 'back' && currentTemplate.supportsBack && currentTemplate.backImage)
+        ? currentTemplate.backImage
+        : currentTemplate.image;
 
   return (
     <div className="flex flex-col xl:flex-row h-full w-full gap-4 p-4 text-slate-200">
@@ -534,22 +585,38 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
               style={{
                 backgroundColor: customBackdropUrl
                   ? '#000000'
+                  : garmentType === 'tshirt'
+                  ? '#ffffff'
                   : currentTemplate.supportsColor
                   ? garmentColor
                   : '#ffffff',
               }}
             />
 
+            {/* Studio Environment Ambient Light for dark garments so black color has clear silhouette */}
+            {currentTemplate.supportsColor && garmentType !== 'tshirt' && (garmentColor === '#0f172a' || garmentColor === '#000000' || garmentColor === '#374151') && !customBackdropUrl && (
+              <div
+                className="absolute inset-0 pointer-events-none z-[1] transition-opacity duration-300"
+                style={{
+                  background: 'radial-gradient(circle at 50% 46%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 42%, transparent 72%)',
+                }}
+              />
+            )}
+
             {/* High-res generated product template texture (dynamically switches between FRONT and BACK) */}
             <img
               key={activeBackdropImage}
               src={activeBackdropImage}
               alt={`${currentTemplate.name} ${garmentSide}`}
-              className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
+              className={`absolute inset-0 w-full h-full pointer-events-none transition-all duration-200 z-[2] ${
                 customBackdropUrl
                   ? 'opacity-100 object-cover'
+                  : garmentType === 'tshirt'
+                  ? 'opacity-100 object-contain'
                   : currentTemplate.supportsColor
-                  ? 'mix-blend-multiply opacity-90 object-cover'
+                  ? (garmentColor === '#0f172a' || garmentColor === '#000000')
+                    ? 'mix-blend-multiply opacity-100 object-contain contrast-[1.18] brightness-[0.98]'
+                    : 'mix-blend-multiply opacity-90 object-contain'
                   : 'opacity-100 object-contain'
               }`}
             />
@@ -566,13 +633,13 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
             {/* Collar Seam reference (for apparel) - switches between front scoop and back high neck */}
             {showPlacementRuler && currentTemplate.hasCollarGuide && !customBackdropUrl && (
               garmentSide === 'front' ? (
-                <div className="absolute top-[16%] left-1/2 -translate-x-1/2 w-36 border-b-2 border-indigo-400/50 rounded-b-full pointer-events-none z-10">
+                <div className="absolute top-[14.5%] left-1/2 -translate-x-1/2 w-36 border-b-2 border-indigo-400/50 rounded-b-full pointer-events-none z-10">
                   <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-indigo-300/80 bg-slate-950/80 px-1 rounded border border-indigo-500/20">
                     Costura Cuello
                   </span>
                 </div>
               ) : (
-                <div className="absolute top-[12%] left-1/2 -translate-x-1/2 w-32 border-b-2 border-dashed border-amber-400/60 pointer-events-none z-10">
+                <div className="absolute top-[14.5%] left-1/2 -translate-x-1/2 w-32 border-b-2 border-dashed border-amber-400/60 pointer-events-none z-10">
                   <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-amber-300/80 bg-slate-950/80 px-1 rounded border border-amber-500/20">
                     Costura Nuca / Espalda
                   </span>
@@ -639,12 +706,10 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                 <div className="flex items-center gap-1.5">
                   {[
                     { hex: '#0f172a', name: 'Negro Carbón' },
-                    { hex: '#ffffff', name: 'Blanco Óptico' },
+                    { hex: '#ffffff', name: 'Blanco Puro' },
                     { hex: '#1e3a8a', name: 'Azul Marino' },
+                    { hex: '#374151', name: 'Gris Melange' },
                     { hex: '#991b1b', name: 'Rojo Carmesí' },
-                    { hex: '#374151', name: 'Gris Jaspeado' },
-                    { hex: '#14532d', name: 'Verde Militar' },
-                    { hex: '#f472b6', name: 'Rosa Pastel' },
                   ].map((sw) => (
                     <button
                       key={sw.hex}
@@ -652,16 +717,35 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                       title={sw.name}
                       style={{ backgroundColor: sw.hex }}
                       className={`w-6 h-6 rounded-md border ${
-                        garmentColor === sw.hex ? 'border-indigo-400 ring-2 ring-indigo-500/40' : 'border-slate-700'
-                      } transition-all`}
+                        garmentColor === sw.hex ? 'border-indigo-400 ring-2 ring-indigo-500/70 scale-105' : 'border-slate-700'
+                      } transition-all cursor-pointer`}
                     />
                   ))}
                 </div>
+                <span className="text-slate-300 font-medium text-[11px] ml-1">
+                  {garmentType === 'tshirt'
+                    ? TSHIRT_COLOR_ASSETS[garmentColor]?.name || 'Negro Carbón'
+                    : ''}
+                </span>
               </>
             ) : (
               <span className="text-slate-400 flex items-center gap-2">
-                <Coffee className="w-4 h-4 text-amber-400" />
-                <span>Cerámica blanca pura calidad Premium para sublimación (11 oz)</span>
+                {currentTemplate.name.includes('Remera') ? (
+                  <>
+                    <Shirt className="w-4 h-4 text-indigo-400" />
+                    <span>Remera 100% Algodón Negro Premium sobre mesa de estudio blanca (Frente y Espalda)</span>
+                  </>
+                ) : currentTemplate.name.includes('Taza') ? (
+                  <>
+                    <Coffee className="w-4 h-4 text-amber-400" />
+                    <span>Cerámica blanca pura calidad Premium para sublimación (11 oz)</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="w-4 h-4 text-emerald-400" />
+                    <span>Lienzo de algodón crudo natural 100% orgánico</span>
+                  </>
+                )}
               </span>
             )}
           </div>
@@ -779,6 +863,101 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
             />
           </div>
 
+          {/* Quick Placement Presets for Garments */}
+          {garmentType === 'tshirt' && (
+            <div className="space-y-1.5 pt-2 border-t border-slate-800">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">
+                Ubicaciones Estándar Rápidas
+              </span>
+              <div className="grid grid-cols-2 gap-1 text-[11px]">
+                <button
+                  onClick={() => {
+                    setPosX(50);
+                    setPosY(44);
+                    setScale(1.0);
+                  }}
+                  className={`px-2 py-1 rounded text-left truncate font-medium border transition-colors ${
+                    posX === 50 && posY === 44
+                      ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Pecho Centro <span className="text-[9px] text-yellow-400 font-mono block">28 × 28 cm</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setPosX(36);
+                    setPosY(33);
+                    setScale(0.55);
+                  }}
+                  className={`px-2 py-1 rounded text-left truncate font-medium border transition-colors ${
+                    posX === 36 && posY === 33
+                      ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Bolsillo Izq. <span className="text-[9px] text-cyan-400 font-mono block">10 × 10 cm</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setPosX(13);
+                    setPosY(32);
+                    setScale(0.45);
+                  }}
+                  className={`px-2 py-1 rounded text-left truncate font-medium border transition-colors ${
+                    posX === 13 && posY === 32
+                      ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Manga Izquierda <span className="text-[9px] text-emerald-400 font-mono block">8 × 8 cm · bíceps</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setPosX(87);
+                    setPosY(32);
+                    setScale(0.45);
+                  }}
+                  className={`px-2 py-1 rounded text-left truncate font-medium border transition-colors ${
+                    posX === 87 && posY === 32
+                      ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Manga Derecha <span className="text-[9px] text-emerald-400 font-mono block">8 × 8 cm · bíceps</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setPosX(28);
+                    setPosY(84);
+                    setScale(0.40);
+                  }}
+                  className={`px-2 py-1 rounded text-left truncate font-medium border transition-colors ${
+                    posX === 28 && posY === 84
+                      ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Dobladillo Izq. <span className="text-[9px] text-pink-400 font-mono block">6 × 6 cm · bajo</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setPosX(72);
+                    setPosY(84);
+                    setScale(0.40);
+                  }}
+                  className={`px-2 py-1 rounded text-left truncate font-medium border transition-colors ${
+                    posX === 72 && posY === 84
+                      ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                      : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Dobladillo Der. <span className="text-[9px] text-pink-400 font-mono block">6 × 6 cm · bajo</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Position Vertical (Y) */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
@@ -787,8 +966,8 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
             </div>
             <input
               type="range"
-              min="15"
-              max="85"
+              min="10"
+              max="88"
               value={posY}
               onChange={(e) => setPosY(parseInt(e.target.value, 10))}
               className="w-full accent-indigo-500 cursor-pointer"
@@ -803,8 +982,8 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
             </div>
             <input
               type="range"
-              min="15"
-              max="85"
+              min="8"
+              max="92"
               value={posX}
               onChange={(e) => setPosX(parseInt(e.target.value, 10))}
               className="w-full accent-indigo-500 cursor-pointer"
@@ -1046,6 +1225,16 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                 }}
               />
 
+              {/* Studio Environment Ambient Light in Fullscreen */}
+              {currentTemplate.supportsColor && (garmentColor === '#0f172a' || garmentColor === '#000000' || garmentColor === '#374151') && !customBackdropUrl && (
+                <div
+                  className="absolute inset-0 pointer-events-none z-[1] transition-opacity duration-300"
+                  style={{
+                    background: 'radial-gradient(circle at 50% 46%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 42%, transparent 72%)',
+                  }}
+                />
+              )}
+
               {/* Interactive Turn Garment Button directly in Fullscreen */}
               {currentTemplate.supportsBack && !customBackdropUrl && (
                 <button
@@ -1085,11 +1274,13 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                 key={activeBackdropImage}
                 src={activeBackdropImage}
                 alt={`${currentTemplate.name} ${garmentSide}`}
-                className={`absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-200 ${
+                className={`absolute inset-0 w-full h-full pointer-events-none transition-all duration-200 z-[2] ${
                   customBackdropUrl
                     ? 'opacity-100 object-cover'
                     : currentTemplate.supportsColor
-                    ? 'mix-blend-multiply opacity-90 object-cover'
+                    ? (garmentColor === '#0f172a' || garmentColor === '#000000')
+                      ? 'mix-blend-multiply opacity-100 object-contain contrast-[1.18] brightness-[0.98]'
+                      : 'mix-blend-multiply opacity-90 object-contain'
                     : 'opacity-100 object-contain'
                 }`}
               />
@@ -1112,7 +1303,7 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                     </span>
                   </div>
                 ) : (
-                  <div className="absolute top-[12%] left-1/2 -translate-x-1/2 w-32 border-b-2 border-dashed border-amber-400/60 pointer-events-none z-10">
+                  <div className="absolute top-[11.5%] left-1/2 -translate-x-1/2 w-32 border-b-2 border-dashed border-amber-400/60 pointer-events-none z-10">
                     <span className="absolute -top-3.5 right-0 translate-x-1/2 text-[8px] font-mono text-amber-300/80 bg-slate-950/80 px-1 rounded border border-amber-500/20">
                       Costura Nuca / Espalda
                     </span>
