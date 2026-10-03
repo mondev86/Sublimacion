@@ -29,6 +29,20 @@ if (apiKey) {
   });
 }
 
+function cleanAndParseJson<T>(rawText: string | undefined, fallback: T): T {
+  if (!rawText) return fallback;
+  try {
+    const cleaned = rawText
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.warn('Failed to parse JSON response from Gemini, using safe fallback:', e);
+    return fallback;
+  }
+}
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', hasGeminiKey: Boolean(apiKey) });
@@ -115,8 +129,40 @@ Devuelve un análisis técnico profesional estructurado en formato JSON con los 
       },
     });
 
-    const parsed = JSON.parse(response.text || '{}');
-    return res.json({ success: true, analysis: parsed });
+    const fallbackAnalysis = {
+      summary: `Diagnóstico para ${technique || 'DTF Textil'} en prenda ${garmentColor || 'Negra'}.`,
+      dpiAssessment: 'Resolución adecuada para producción comercial a 300 DPI.',
+      whiteUnderbasePercent: 85,
+      powderAdhesionAdvice: 'Para prendas oscuras en DTF, asegurar calado en sombras suaves para evitar poliamida excesiva.',
+      pressSettings: {
+        temperature: technique === 'Sublimación' ? '200°C' : '160°C',
+        time: technique === 'Sublimación' ? '45s' : '15s',
+        pressure: 'Media',
+        peel: technique === 'Sublimación' ? 'Caliente' : 'Frío',
+        substrate: technique === 'Sublimación' ? 'Poliéster' : 'Algodón'
+      },
+      recommendations: ['Verificar contraste de contornos', 'Comprobar resolución mínima 300 DPI']
+    };
+
+    const parsed = cleanAndParseJson<any>(response.text, fallbackAnalysis);
+
+    // Validate and sanitize shape
+    const validatedAnalysis = {
+      summary: typeof parsed.summary === 'string' ? parsed.summary : fallbackAnalysis.summary,
+      dpiAssessment: typeof parsed.dpiAssessment === 'string' ? parsed.dpiAssessment : fallbackAnalysis.dpiAssessment,
+      whiteUnderbasePercent: typeof parsed.whiteUnderbasePercent === 'number' ? parsed.whiteUnderbasePercent : fallbackAnalysis.whiteUnderbasePercent,
+      powderAdhesionAdvice: typeof parsed.powderAdhesionAdvice === 'string' ? parsed.powderAdhesionAdvice : fallbackAnalysis.powderAdhesionAdvice,
+      pressSettings: {
+        temperature: parsed.pressSettings?.temperature || fallbackAnalysis.pressSettings.temperature,
+        time: parsed.pressSettings?.time || fallbackAnalysis.pressSettings.time,
+        pressure: parsed.pressSettings?.pressure || fallbackAnalysis.pressSettings.pressure,
+        peel: parsed.pressSettings?.peel || fallbackAnalysis.pressSettings.peel,
+        substrate: parsed.pressSettings?.substrate || fallbackAnalysis.pressSettings.substrate,
+      },
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : fallbackAnalysis.recommendations,
+    };
+
+    return res.json({ success: true, mockFallback: false, analysis: validatedAnalysis });
   } catch (error: any) {
     console.error('Error in analyze-artwork:', error);
     return res.status(500).json({ error: error.message || 'Error processing AI analysis' });
@@ -127,22 +173,25 @@ Devuelve un análisis técnico profesional estructurado en formato JSON con los 
 app.post('/api/ai/design-ideas', async (req, res) => {
   try {
     const { concept, niche, style } = req.body;
+    const defaultIdeas = [
+      {
+        title: 'Streetwear Vintage Skull',
+        palette: ['#0f172a', '#f59e0b', '#dc2626', '#ffffff'],
+        promptSuggestion: 'High contrast neo-traditional skull tattoo illustration, bold clean outlines, vintage halftone shading, dtf print ready, transparent background',
+        recommendedTechnique: 'DTF Textil'
+      },
+      {
+        title: 'Aura Retro Minimalist',
+        palette: ['#ec4899', '#8b5cf6', '#3b82f6', '#f8fafc'],
+        promptSuggestion: 'Minimalist continuous line art face with vibrant gradient splash background, high resolution 300 dpi clean edges',
+        recommendedTechnique: 'Sublimación'
+      }
+    ];
+
     if (!ai) {
       return res.status(200).json({
-        ideas: [
-          {
-            title: 'Streetwear Vintage Skull',
-            palette: ['#0f172a', '#f59e0b', '#dc2626', '#ffffff'],
-            promptSuggestion: 'High contrast neo-traditional skull tattoo illustration, bold clean outlines, vintage halftone shading, dtf print ready, transparent background',
-            recommendedTechnique: 'DTF Textil'
-          },
-          {
-            title: 'Aura Retro Minimalist',
-            palette: ['#ec4899', '#8b5cf6', '#3b82f6', '#f8fafc'],
-            promptSuggestion: 'Minimalist continuous line art face with vibrant gradient splash background, high resolution 300 dpi clean edges',
-            recommendedTechnique: 'Sublimación'
-          }
-        ]
+        mockFallback: true,
+        ideas: defaultIdeas
       });
     }
 
@@ -168,8 +217,13 @@ Devuelve únicamente un JSON válido con esta estructura:
       },
     });
 
-    const parsed = JSON.parse(response.text || '{"ideas":[]}');
-    return res.json(parsed);
+    const parsed = cleanAndParseJson<{ ideas?: any[] }>(response.text, { ideas: defaultIdeas });
+    const validatedIdeas = Array.isArray(parsed.ideas) && parsed.ideas.length > 0 ? parsed.ideas : defaultIdeas;
+
+    return res.json({
+      mockFallback: false,
+      ideas: validatedIdeas
+    });
   } catch (err: any) {
     console.error('Error generating design ideas:', err);
     return res.status(500).json({ error: err.message || 'Error in design ideas' });

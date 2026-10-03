@@ -41,6 +41,20 @@ interface ProductConfig {
   hint: string;
 }
 
+const isDarkGarmentColor = (hex: string): boolean => {
+  if (!hex || hex === '#ffffff') return false;
+  const lower = hex.toLowerCase();
+  if (['#0f172a', '#000000', '#1e3a8a', '#374151', '#991b1b', '#7f1d1d', '#14532d'].includes(lower)) return true;
+  const cleanHex = hex.replace('#', '');
+  if (cleanHex.length === 6) {
+    const r = parseInt(cleanHex.substring(0, 2), 16);
+    const g = parseInt(cleanHex.substring(2, 4), 16);
+    const b = parseInt(cleanHex.substring(4, 6), 16);
+    return 0.299 * r + 0.587 * g + 0.114 * b < 140;
+  }
+  return false;
+};
+
 const TSHIRT_COLOR_ASSETS: Record<string, { front: string; back: string; name: string }> = {
   '#0f172a': {
     name: 'Negro Carbón',
@@ -322,7 +336,7 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
         ctx.font = '500 16px "Plus Jakarta Sans", sans-serif';
         ctx.fillText(`Aprobación de muestra para cliente · Fecha: ${new Date().toLocaleDateString()}`, 40, canvas.height - 24);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const dataUrl = canvas.toDataURL('image/png');
         setCapturedSnapshotUrl(dataUrl);
       };
       designImg.src = activeDesignUrl;
@@ -337,7 +351,7 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
   const downloadSnapshot = () => {
     if (!capturedSnapshotUrl) return;
     const link = document.createElement('a');
-    link.download = `Mockup_${PRODUCT_TEMPLATES[garmentType].name.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
+    link.download = `Mockup_${PRODUCT_TEMPLATES[garmentType].name.replace(/\s+/g, '_')}_${Date.now()}.png`;
     link.href = capturedSnapshotUrl;
     link.click();
   };
@@ -594,7 +608,7 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
             />
 
             {/* Studio Environment Ambient Light for dark garments so black color has clear silhouette */}
-            {currentTemplate.supportsColor && garmentType !== 'tshirt' && (garmentColor === '#0f172a' || garmentColor === '#000000' || garmentColor === '#374151') && !customBackdropUrl && (
+            {currentTemplate.supportsColor && garmentType !== 'tshirt' && isDarkGarmentColor(garmentColor) && !customBackdropUrl && (
               <div
                 className="absolute inset-0 pointer-events-none z-[1] transition-opacity duration-300"
                 style={{
@@ -614,7 +628,7 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                   : garmentType === 'tshirt'
                   ? 'opacity-100 object-contain'
                   : currentTemplate.supportsColor
-                  ? (garmentColor === '#0f172a' || garmentColor === '#000000')
+                  ? isDarkGarmentColor(garmentColor)
                     ? 'mix-blend-multiply opacity-100 object-contain contrast-[1.18] brightness-[0.98]'
                     : 'mix-blend-multiply opacity-90 object-contain'
                   : 'opacity-100 object-contain'
@@ -657,7 +671,7 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                 height: `${((currentTemplate.maxH / 650) * 100) * scale}%`,
                 transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
                 opacity: opacity,
-                mixBlendMode: (garmentColor === '#0f172a' || garmentColor === '#000000' || blendMode === 'normal') ? 'normal' : blendMode,
+                mixBlendMode: (isDarkGarmentColor(garmentColor) || blendMode === 'normal') ? 'normal' : blendMode,
               }}
             >
               {activeDesignUrl ? (
@@ -666,7 +680,7 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
                   alt="Graphic Print"
                   className="w-full h-full object-contain pointer-events-none drop-shadow-xl"
                   style={{
-                    filter: (garmentColor === '#0f172a' || garmentColor === '#000000')
+                    filter: isDarkGarmentColor(garmentColor)
                       ? 'drop-shadow(0 4px 14px rgba(0,0,0,0.65)) contrast(1.05)'
                       : 'drop-shadow(0 2px 8px rgba(0,0,0,0.25))'
                   }}
@@ -1002,6 +1016,23 @@ export const VirtualARPreview: React.FC<VirtualARPreviewProps> = ({ initialDesig
               max="45"
               value={rotation}
               onChange={(e) => setRotation(parseInt(e.target.value, 10))}
+              className="w-full accent-indigo-500 cursor-pointer"
+            />
+          </div>
+
+          {/* Opacity Slider */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-slate-300 font-medium">Opacidad de Estampa</label>
+              <span className="font-mono text-indigo-400 font-semibold">{Math.round(opacity * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0.2"
+              max="1"
+              step="0.05"
+              value={opacity}
+              onChange={(e) => setOpacity(parseFloat(e.target.value))}
               className="w-full accent-indigo-500 cursor-pointer"
             />
           </div>

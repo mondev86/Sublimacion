@@ -97,6 +97,25 @@ export function autoDetectBackgroundColor(sourceCanvas: HTMLCanvasElement): stri
 }
 
 /**
+ * Perceptual color distance (Redmean algorithm)
+ * Accurately models human visual perception (eye sensitivity to red, green, and blue cones).
+ */
+export function getPerceptualColorDistance(
+  r1: number,
+  g1: number,
+  b1: number,
+  r2: number,
+  g2: number,
+  b2: number
+): number {
+  const rmean = (r1 + r2) * 0.5;
+  const dr = r1 - r2;
+  const dg = g1 - g2;
+  const db = b1 - b2;
+  return Math.sqrt((((512 + rmean) * dr * dr) / 256) + 4 * dg * dg + (((767 - rmean) * db * db) / 256));
+}
+
+/**
  * Removes background using either Contiguous Flood-Fill (protects interior whites/details)
  * or Global Chroma Keying (removes everywhere), with tolerance, feathering, and halo defringing.
  */
@@ -124,15 +143,11 @@ export function removeBackgroundAdvanced(
   const data = imgData.data;
 
   const target = hexToRgb(keyColorHex);
-  const maxTol = (tolerance / 100) * 441.67;
-  const featherRange = (feather / 100) * 150;
+  const maxTol = (tolerance / 100) * 764.83;
+  const featherRange = (feather / 100) * 220;
 
   const colorDist = (r: number, g: number, b: number) => {
-    return Math.sqrt(
-      Math.pow(r - target.r, 2) +
-      Math.pow(g - target.g, 2) +
-      Math.pow(b - target.b, 2)
-    );
+    return getPerceptualColorDistance(r, g, b, target.r, target.g, target.b);
   };
 
   if (mode === 'global') {
@@ -191,14 +206,14 @@ export function removeBackgroundAdvanced(
     }
   }
 
-  // De-Fringing: cleans color bleed on anti-aliased edge pixels
+  // De-Fringing: cleans color bleed on anti-aliased edge pixels (including alpha 255 border pixels)
   if (deFringe) {
     for (let i = 0; i < data.length; i += 4) {
       const a = data[i + 3];
-      if (a > 0 && a < 255) {
+      if (a > 0) {
         const dist = colorDist(data[i], data[i + 1], data[i + 2]);
-        if (dist < maxTol * 1.6) {
-          data[i + 3] = Math.max(0, Math.round(a * (dist / (maxTol * 1.6))));
+        if (dist < maxTol * 1.5) {
+          data[i + 3] = Math.max(0, Math.round(a * (dist / (maxTol * 1.5))));
         }
       }
     }
@@ -265,15 +280,11 @@ export function magicEraserFloodFill(
     return sourceCanvas;
   }
 
-  const maxTol = (tolerance / 100) * 441.67;
-  const featherRange = (feather / 100) * 150;
+  const maxTol = (tolerance / 100) * 764.83;
+  const featherRange = (feather / 100) * 220;
 
   const colorDist = (r: number, g: number, b: number) => {
-    return Math.sqrt(
-      Math.pow(r - targetR, 2) +
-      Math.pow(g - targetG, 2) +
-      Math.pow(b - targetB, 2)
-    );
+    return getPerceptualColorDistance(r, g, b, targetR, targetG, targetB);
   };
 
   const visited = new Uint8Array(width * height);
@@ -449,8 +460,8 @@ export function applyArtisticKnockout(
   const data = imgData.data;
 
   const target = hexToRgb(config.targetColor);
-  const maxTol = (config.tolerance / 100) * 441.67;
-  const featherRange = (config.feather / 100) * 180;
+  const maxTol = (config.tolerance / 100) * 764.83;
+  const featherRange = (config.feather / 100) * 250;
 
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] === 0) continue;
@@ -459,11 +470,7 @@ export function applyArtisticKnockout(
     const g = data[i + 1];
     const b = data[i + 2];
 
-    const dist = Math.sqrt(
-      Math.pow(r - target.r, 2) +
-      Math.pow(g - target.g, 2) +
-      Math.pow(b - target.b, 2)
-    );
+    const dist = getPerceptualColorDistance(r, g, b, target.r, target.g, target.b);
 
     if (dist <= maxTol) {
       data[i + 3] = 0; // Completely knocked out
