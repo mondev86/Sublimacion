@@ -1,6 +1,6 @@
 {
   "name": "SubliDTF Studio Pro",
   "description": "Suite online para talleres DTF y sublimación: crea semitonos, arma pliegos con nesting, quita fondos, mejora imágenes a 300 DPI y prepara archivos listos para imprimir.",
-  "requestFramePermissions": ["camera"],
+  "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -8,7 +8,6 @@ import {
   Sparkles,
   Layers,
   Wand2,
-  Camera,
   ClipboardList,
   Package,
   Plus,
