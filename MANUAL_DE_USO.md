@@ -123,29 +123,31 @@ En la barra inferior verás en tiempo real:
 
 ---
 
-## 3. Módulo 3: Previsualizador con Realidad Aumentada (AR)
+## 3. Módulo 3: Previsualizador & Mockups de Estudio
 
-Evita reclamos del cliente permitiéndole ver cómo quedará su prenda antes de imprimir.
+Evita reclamos del cliente permitiéndole ver cómo quedará su estampa antes de imprimir, simulando sombras textiles, texturas y dimensiones reales.
 
-### Modo Cámara en Tiempo Real (AR)
-1. Selecciona la pestaña **"Previsualizador AR"** y activa **"Cámara en Tiempo Real"**.
-2. Otorga permiso a la cámara de tu celular, laptop o webcam.
-3. Apunta a la persona vestida con una remera o a una prenda colgada en un perchero.
-4. El diseño se superpondrá sobre la tela en vivo.
-5. Puedes ajustar el tamaño, rotación e inclinación para coincidir con la postura de la persona.
-6. El modo de fusión **"Multiplicar"** hace que las arrugas, pliegues y sombras de la remera atraviesen el diseño, logrando un realismo total.
+### Modo Estudio Interactivo Multisuperficie
+1. Selecciona la pestaña **"Mockups de Estudio"**.
+2. **Selector de Prendas & Productos**:
+   - **Remera Cuello Redondo** (Frente y Espalda).
+   - **Buzo Hoodie Frisado** (Frente y Espalda).
+   - **Gorra Trucker / Gorro Deportivo**.
+   - **Taza Cerámica Sublimable AAA**.
+   - **Bolsa Ecológica Tote Bag**.
+3. **Paleta de Colores de Prenda**:
+   - Cambia el color de la remera con un clic (Negro Carbón, Blanco Puro, Azul Marino, Bordó, Verde Militar, etc.).
+4. **Carga de Prenda Propia (Fondo Personalizado)**:
+   - Sube una fotografía real de la prenda de tu cliente o de tu propio taller para estampar virtualmente sobre su foto.
+5. **Ajuste Fotorrealista**:
+   - El modo de fusión de sombras (**Normal / Multiplicar**) y el deslizador de **Opacidad** permiten que las arrugas, pliegues y texturas de la tela se integren con el arte para un acabado 100% natural.
 
-### Modo Estudio Fotorrealista
-- Permite simular sobre remeras con textura real de algodón peinado.
-- Cambia el color de la prenda con los botones inferiores (Negro Carbón, Blanco Óptico, Azul Marino, Bordó, Gris Jaspeado, Verde Militar, etc.).
-- Activa la **Regla & Láser** para mostrar la distancia desde el cuello en centímetros.
-
-### Muestras de Validación para WhatsApp
-- Haz clic en **"Tomar Foto Validación"**.
-- Se capturará una imagen en alta definición con una franja institucional inferior que indica:
-  - *Muestra Aprobada para Estampado - SubliDTF Studio Pro*.
-  - Fecha del pedido y dimensiones aprobadas.
-- Presiona **"Descargar Validación"** y envíala por WhatsApp al cliente para tener su confirmación por escrito antes de encender la plancha.
+### Muestras de Validación Comercial para WhatsApp
+- Haz clic en **"Generar Mockup PNG"** o abre la **"Vista Completa"**.
+- El sistema compone una imagen de alta resolución que incluye:
+  - La prenda fotorrealista con el diseño en su ubicación y escala exactas.
+  - La franja técnica institucional inferior con tipo de prenda, vista (frente/espalda), fecha y sello de aprobación de taller.
+- Presiona **"Descargar Mockup"** y envíala por WhatsApp al cliente para obtener su confirmación formal por escrito antes de producir.
 
 ---
 

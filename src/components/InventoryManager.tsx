@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Package,
   AlertTriangle,
@@ -15,99 +15,120 @@ import {
 } from 'lucide-react';
 import { InventoryItem } from '../types';
 
+const INITIAL_INVENTORY_ITEMS: InventoryItem[] = [
+  {
+    id: 'inv-1',
+    name: 'Bobina Rollo DTF Premium 30cm x 100m (Cold Peel)',
+    category: 'Film DTF',
+    currentStock: 48,
+    unit: 'm',
+    minThreshold: 20,
+    costPerUnit: 1.8,
+    notes: 'Película tratada antiestática doble cara para secado rápido.',
+  },
+  {
+    id: 'inv-2',
+    name: 'Bobina Rollo DTF Industrial 60cm x 100m',
+    category: 'Film DTF',
+    currentStock: 12,
+    unit: 'm',
+    minThreshold: 15,
+    costPerUnit: 3.4,
+    notes: 'Para pliegos anchos en plotter doble cabezal.',
+  },
+  {
+    id: 'inv-3',
+    name: 'Tinta DTF Textil Blanca (White Ink Pigment)',
+    category: 'Tintas',
+    currentStock: 350,
+    unit: 'ml',
+    minThreshold: 500, // Low stock warning!
+    costPerUnit: 0.08,
+    notes: 'Requiere recirculación diaria en el damper para evitar sedimentación.',
+  },
+  {
+    id: 'inv-4',
+    name: 'Tinta DTF Textil CMYK (Pack x 4 colores)',
+    category: 'Tintas',
+    currentStock: 1200,
+    unit: 'ml',
+    minThreshold: 400,
+    costPerUnit: 0.05,
+    notes: 'Colores de alta densidad cromática base agua.',
+  },
+  {
+    id: 'inv-5',
+    name: 'Polvo Poliamida Termofusible Blanco Medio (Adhesivo)',
+    category: 'Poliamida',
+    currentStock: 3.5,
+    unit: 'kg',
+    minThreshold: 2.0,
+    costPerUnit: 24.0,
+    notes: 'Granulometría 80-200 micrones, tacto suave elástico.',
+  },
+  {
+    id: 'inv-6',
+    name: 'Papel de Sublimación Premium Secado Rápido A3 (100 gr)',
+    category: 'Papel Sublimación',
+    currentStock: 180,
+    unit: 'hojas',
+    minThreshold: 50,
+    costPerUnit: 0.25,
+    notes: 'Transferencia de color al 98% en poliéster.',
+  },
+  {
+    id: 'inv-7',
+    name: 'Tazas de Cerámica Importada AAA Sublimable 11oz',
+    category: 'Textiles/Blancos',
+    currentStock: 8,
+    unit: 'unidades',
+    minThreshold: 24, // Low stock!
+    costPerUnit: 1.4,
+    notes: 'Acabado ultra brillante apto microondas.',
+  },
+  {
+    id: 'inv-8',
+    name: 'Remeras Algodón Peinado 24/1 Negras (Lote S-M-L-XL)',
+    category: 'Textiles/Blancos',
+    currentStock: 42,
+    unit: 'unidades',
+    minThreshold: 20,
+    costPerUnit: 5.5,
+    notes: 'Tejido jersey 100% algodón ideal DTF.',
+  },
+  {
+    id: 'inv-9',
+    name: 'Cinta Térmica para Alta Temperatura (Poliamida Kapton)',
+    category: 'Insumos Térmicos',
+    currentStock: 6,
+    unit: 'rollos',
+    minThreshold: 3,
+    costPerUnit: 2.0,
+    notes: 'Soporta hasta 260°C sin dejar residuos de pegamento.',
+  },
+];
+
 export const InventoryManager: React.FC = () => {
-  const [items, setItems] = useState<InventoryItem[]>([
-    {
-      id: 'inv-1',
-      name: 'Bobina Rollo DTF Premium 30cm x 100m (Cold Peel)',
-      category: 'Film DTF',
-      currentStock: 48,
-      unit: 'm',
-      minThreshold: 20,
-      costPerUnit: 1.8,
-      notes: 'Película tratada antiestática doble cara para secado rápido.',
-    },
-    {
-      id: 'inv-2',
-      name: 'Bobina Rollo DTF Industrial 60cm x 100m',
-      category: 'Film DTF',
-      currentStock: 12,
-      unit: 'm',
-      minThreshold: 15,
-      costPerUnit: 3.4,
-      notes: 'Para pliegos anchos en plotter doble cabezal.',
-    },
-    {
-      id: 'inv-3',
-      name: 'Tinta DTF Textil Blanca (White Ink Pigment)',
-      category: 'Tintas',
-      currentStock: 350,
-      unit: 'ml',
-      minThreshold: 500, // Low stock warning!
-      costPerUnit: 0.08,
-      notes: 'Requiere recirculación diaria en el damper para evitar sedimentación.',
-    },
-    {
-      id: 'inv-4',
-      name: 'Tinta DTF Textil CMYK (Pack x 4 colores)',
-      category: 'Tintas',
-      currentStock: 1200,
-      unit: 'ml',
-      minThreshold: 400,
-      costPerUnit: 0.05,
-      notes: 'Colores de alta densidad cromática base agua.',
-    },
-    {
-      id: 'inv-5',
-      name: 'Polvo Poliamida Termofusible Blanco Medio (Adhesivo)',
-      category: 'Poliamida',
-      currentStock: 3.5,
-      unit: 'kg',
-      minThreshold: 2.0,
-      costPerUnit: 24.0,
-      notes: 'Granulometría 80-200 micrones, tacto suave elástico.',
-    },
-    {
-      id: 'inv-6',
-      name: 'Papel de Sublimación Premium Secado Rápido A3 (100 gr)',
-      category: 'Papel Sublimación',
-      currentStock: 180,
-      unit: 'hojas',
-      minThreshold: 50,
-      costPerUnit: 0.25,
-      notes: 'Transferencia de color al 98% en poliéster.',
-    },
-    {
-      id: 'inv-7',
-      name: 'Tazas de Cerámica Importada AAA Sublimable 11oz',
-      category: 'Textiles/Blancos',
-      currentStock: 8,
-      unit: 'unidades',
-      minThreshold: 24, // Low stock!
-      costPerUnit: 1.4,
-      notes: 'Acabado ultra brillante apto microondas.',
-    },
-    {
-      id: 'inv-8',
-      name: 'Remeras Algodón Peinado 24/1 Negras (Lote S-M-L-XL)',
-      category: 'Textiles/Blancos',
-      currentStock: 42,
-      unit: 'unidades',
-      minThreshold: 20,
-      costPerUnit: 5.5,
-      notes: 'Tejido jersey 100% algodón ideal DTF.',
-    },
-    {
-      id: 'inv-9',
-      name: 'Cinta Térmica para Alta Temperatura (Poliamida Kapton)',
-      category: 'Insumos Térmicos',
-      currentStock: 6,
-      unit: 'rollos',
-      minThreshold: 3,
-      costPerUnit: 2.0,
-      notes: 'Soporta hasta 260°C sin dejar residuos de pegamento.',
-    },
-  ]);
+  const [items, setItems] = useState<InventoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('sublidtf_inventory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Error reading inventory from localStorage', e);
+    }
+    return INITIAL_INVENTORY_ITEMS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sublidtf_inventory', JSON.stringify(items));
+    } catch (e) {
+      console.warn('Error saving inventory to localStorage', e);
+    }
+  }, [items]);
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState<boolean>(false);

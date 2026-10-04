@@ -266,29 +266,29 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
         showToast('📍 Bolsillo Der. (10 × 10 cm)');
         break;
       case 'left_sleeve':
-        setPlacementDistanceCm(13.5);
-        setPlacementOffsetXCm(-28.5);
+        setPlacementDistanceCm(8.0);
+        setPlacementOffsetXCm(-26.0);
         setGarmentSide('front');
         setProportionalSize(8, 8);
         showToast('📍 Manga Izquierda (8 × 8 cm · bíceps)');
         break;
       case 'right_sleeve':
-        setPlacementDistanceCm(13.5);
-        setPlacementOffsetXCm(28.5);
+        setPlacementDistanceCm(8.0);
+        setPlacementOffsetXCm(26.0);
         setGarmentSide('front');
         setProportionalSize(8, 8);
         showToast('📍 Manga Derecha (8 × 8 cm · bíceps)');
         break;
       case 'hem_left':
-        setPlacementDistanceCm(56.0);
-        setPlacementOffsetXCm(-18.0);
+        setPlacementDistanceCm(63.0);
+        setPlacementOffsetXCm(-16.0);
         setGarmentSide('front');
         setProportionalSize(6, 6);
         showToast('📍 Dobladillo Inferior Izquierdo (6 × 6 cm · bajo)');
         break;
       case 'hem_right':
-        setPlacementDistanceCm(56.0);
-        setPlacementOffsetXCm(18.0);
+        setPlacementDistanceCm(63.0);
+        setPlacementOffsetXCm(16.0);
         setGarmentSide('front');
         setProportionalSize(6, 6);
         showToast('📍 Dobladillo Inferior Derecho (6 × 6 cm · bajo)');
@@ -394,6 +394,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
   // AI Advisor state
   const [isAnalyzingAI, setIsAnalyzingAI] = useState<boolean>(false);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
+  const [isAiOffline, setIsAiOffline] = useState<boolean>(false);
 
   // Canvas refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1220,10 +1221,12 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
       const ctx = tempCanvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0);
 
+      pushSnapshot();
       const enhanced = upscaleAndSharpen(tempCanvas, upscaleFactor, 0.45);
       const enhancedUrl = enhanced.toDataURL('image/png', 1.0);
 
       setCurrentImageUrl(enhancedUrl);
+      setOriginalImageUrl(enhancedUrl); // Promotes the high-res upscale as active base to prevent slider overrides
       setPixelWidth(enhanced.width);
       setPixelHeight(enhanced.height);
 
@@ -1233,6 +1236,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
         const cCtx = canvasRef.current.getContext('2d');
         cCtx?.drawImage(enhanced, 0, 0);
       }
+      showToast(`⚡ Super-Resolución aplicada (${upscaleFactor}x)`);
     } catch (err) {
       console.error('Error upscaling:', err);
     } finally {
@@ -1260,6 +1264,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
       const data = await res.json();
       if (data.analysis) {
         setAiAnalysis(data.analysis);
+        setIsAiOffline(Boolean(data.mockFallback));
       }
     } catch (err) {
       console.error('Error analyzing artwork with AI:', err);
@@ -1268,12 +1273,39 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
     }
   };
 
-  // Download high-resolution PNG
+  // Download high-resolution PNG (guaranteed .png extension and PNG data)
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.download = `DTF_Optimizado_300DPI_${imageName}`;
-    link.href = currentImageUrl || originalImageUrl;
-    link.click();
+    const rawName = imageName.replace(/\.[^/.]+$/, '');
+    const cleanName = `DTF_Optimizado_300DPI_${rawName}.png`;
+    const targetUrl = currentImageUrl || originalImageUrl;
+    if (!targetUrl) return;
+
+    // If it's already a PNG data URL, trigger download directly
+    if (targetUrl.startsWith('data:image/png')) {
+      const link = document.createElement('a');
+      link.download = cleanName;
+      link.href = targetUrl;
+      link.click();
+      showToast('Descarga PNG 300 DPI iniciada');
+      return;
+    }
+
+    // Otherwise render to offscreen canvas to guarantee genuine PNG encoding
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const ctx = c.getContext('2d');
+      ctx?.drawImage(img, 0, 0);
+      const link = document.createElement('a');
+      link.download = cleanName;
+      link.href = c.toDataURL('image/png', 1.0);
+      link.click();
+      showToast('Descarga PNG 300 DPI iniciada');
+    };
+    img.src = targetUrl;
   };
 
   const calculatedDpi = calculateDpi(pixelWidth, targetWidthCm);
@@ -2202,7 +2234,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                               <button
                                 onClick={() => applyPlacementPreset('left_sleeve')}
                                 className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
-                                  garmentSide === 'front' && placementOffsetXCm === -28.5
+                                  garmentSide === 'front' && placementOffsetXCm === -26.0
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
@@ -2213,7 +2245,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                               <button
                                 onClick={() => applyPlacementPreset('right_sleeve')}
                                 className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
-                                  garmentSide === 'front' && placementOffsetXCm === 28.5
+                                  garmentSide === 'front' && placementOffsetXCm === 26.0
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
@@ -3649,10 +3681,10 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                         }}
                         className={`px-2.5 py-1.5 rounded-md font-medium text-[11px] border transition-colors text-left truncate ${
                           garmentSide === 'front' &&
-                          ((p.id === 'left_sleeve' && placementOffsetXCm === -28.5) ||
-                            (p.id === 'right_sleeve' && placementOffsetXCm === 28.5) ||
-                            (p.id === 'hem_left' && placementDistanceCm >= 50 && placementOffsetXCm < 0) ||
-                            (p.id === 'hem_right' && placementDistanceCm >= 50 && placementOffsetXCm > 0))
+                          ((p.id === 'left_sleeve' && placementOffsetXCm === -26.0) ||
+                            (p.id === 'right_sleeve' && placementOffsetXCm === 26.0) ||
+                            (p.id === 'hem_left' && placementDistanceCm >= 55 && placementOffsetXCm < 0) ||
+                            (p.id === 'hem_right' && placementDistanceCm >= 55 && placementOffsetXCm > 0))
                             ? 'bg-indigo-600/30 border-indigo-500 text-white'
                             : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
                         }`}
@@ -4212,6 +4244,12 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
 
               {aiAnalysis && (
                 <div className="space-y-3 bg-slate-900/70 p-3.5 rounded-lg border border-indigo-500/30">
+                  {isAiOffline && (
+                    <div className="px-2.5 py-1.5 rounded bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                      <span>Modo Asistente de Taller (Plantillas Técnicas Offline)</span>
+                    </div>
+                  )}
                   <div>
                     <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider block mb-1">
                       Diagnóstico de Producción

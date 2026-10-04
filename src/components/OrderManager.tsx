@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -16,78 +16,99 @@ import {
 } from 'lucide-react';
 import { CustomerOrder, OrderStatus, TechniqueType } from '../types';
 
+const INITIAL_ORDERS_DATA: CustomerOrder[] = [
+  {
+    id: 'ord-101',
+    orderNumber: 'PED-1082',
+    customerName: 'Santiago Rossi (Gimnasio Titan)',
+    phone: '+54 9 11 5824-9912',
+    email: 'contacto@titanfit.com',
+    technique: 'DTF Textil',
+    itemsDescription: '15 Remeras Algodón Peinado 24/1 Negras (L y XL) con Logo Frente y Espalda Calada',
+    quantity: 15,
+    garmentType: 'Remera Algodón',
+    garmentColor: 'Negro Carbón',
+    status: 'En Cola de Impresión',
+    deliveryDate: '2026-10-02',
+    totalAmount: 142500,
+    depositAmount: 70000,
+    notes: 'Planchar a 160°C por 15s con despegue en frío. Segundo planchado con papel siliconado mate.',
+    createdAt: '2026-09-27',
+  },
+  {
+    id: 'ord-102',
+    orderNumber: 'PED-1083',
+    customerName: 'Lucía Benítez (Café Nómade)',
+    phone: '+54 9 11 4110-3320',
+    technique: 'Sublimación',
+    itemsDescription: '24 Tazas Cerámicas Importadas AAA con diseño tropical full color',
+    quantity: 24,
+    garmentType: 'Taza Cerámica',
+    garmentColor: 'Blanco Brillo',
+    status: 'Estampado',
+    deliveryDate: '2026-09-30',
+    totalAmount: 84000,
+    depositAmount: 84000,
+    notes: 'Horno de tazas a 195°C por 180 segundos. Revisar que la manija no quede expuesta.',
+    createdAt: '2026-09-25',
+  },
+  {
+    id: 'ord-103',
+    orderNumber: 'PED-1084',
+    customerName: 'Federico Gómez (Band Rock)',
+    phone: '+54 9 11 9923-8814',
+    technique: 'DTF Textil',
+    itemsDescription: '30 Buzos Hoodie Frisados con estampado DTF formato A3 en pecho',
+    quantity: 30,
+    garmentType: 'Buzo Hoodie',
+    garmentColor: 'Gris Melange',
+    status: 'Presupuesto',
+    deliveryDate: '2026-10-06',
+    totalAmount: 360000,
+    depositAmount: 0,
+    notes: 'Esperando validación de muestra virtual enviada por WhatsApp.',
+    createdAt: '2026-09-28',
+  },
+  {
+    id: 'ord-104',
+    orderNumber: 'PED-1085',
+    customerName: 'Cervecería Patagonia Craft',
+    phone: '+54 9 11 3344-5566',
+    technique: 'DTF UV',
+    itemsDescription: '50 Vasos de Vidrio Pinta con logo DTF UV relieve brillante',
+    quantity: 50,
+    garmentType: 'Vidrio / Botellas',
+    garmentColor: 'Transparente',
+    status: 'Entregado',
+    deliveryDate: '2026-09-26',
+    totalAmount: 110000,
+    depositAmount: 110000,
+    notes: 'Transferencia directa sin calor. Adhesión ultra fuerte.',
+    createdAt: '2026-09-22',
+  },
+];
+
 export const OrderManager: React.FC = () => {
-  const [orders, setOrders] = useState<CustomerOrder[]>([
-    {
-      id: 'ord-101',
-      orderNumber: 'PED-1082',
-      customerName: 'Santiago Rossi (Gimnasio Titan)',
-      phone: '+54 9 11 5824-9912',
-      email: 'contacto@titanfit.com',
-      technique: 'DTF Textil',
-      itemsDescription: '15 Remeras Algodón Peinado 24/1 Negras (L y XL) con Logo Frente y Espalda Calada',
-      quantity: 15,
-      garmentType: 'Remera Algodón',
-      garmentColor: 'Negro Carbón',
-      status: 'En Cola de Impresión',
-      deliveryDate: '2026-10-02',
-      totalAmount: 142500,
-      depositAmount: 70000,
-      notes: 'Planchar a 160°C por 15s con despegue en frío. Segundo planchado con papel siliconado mate.',
-      createdAt: '2026-09-27',
-    },
-    {
-      id: 'ord-102',
-      orderNumber: 'PED-1083',
-      customerName: 'Lucía Benítez (Café Nómade)',
-      phone: '+54 9 11 4110-3320',
-      technique: 'Sublimación',
-      itemsDescription: '24 Tazas Cerámicas Importadas AAA con diseño tropical full color',
-      quantity: 24,
-      garmentType: 'Taza Cerámica',
-      garmentColor: 'Blanco Brillo',
-      status: 'Estampado',
-      deliveryDate: '2026-09-30',
-      totalAmount: 84000,
-      depositAmount: 84000,
-      notes: 'Horno de tazas a 195°C por 180 segundos. Revisar que la manija no quede expuesta.',
-      createdAt: '2026-09-25',
-    },
-    {
-      id: 'ord-103',
-      orderNumber: 'PED-1084',
-      customerName: 'Federico Gómez (Band Rock)',
-      phone: '+54 9 11 9923-8814',
-      technique: 'DTF Textil',
-      itemsDescription: '30 Buzos Hoodie Frisados con estampado DTF formato A3 en pecho',
-      quantity: 30,
-      garmentType: 'Buzo Hoodie',
-      garmentColor: 'Gris Melange',
-      status: 'Presupuesto',
-      deliveryDate: '2026-10-06',
-      totalAmount: 360000,
-      depositAmount: 0,
-      notes: 'Esperando validación de muestra virtual enviada por WhatsApp.',
-      createdAt: '2026-09-28',
-    },
-    {
-      id: 'ord-104',
-      orderNumber: 'PED-1085',
-      customerName: 'Cervecería Patagonia Craft',
-      phone: '+54 9 11 3344-5566',
-      technique: 'DTF UV',
-      itemsDescription: '50 Vasos de Vidrio Pinta con logo DTF UV relieve brillante',
-      quantity: 50,
-      garmentType: 'Vidrio / Botellas',
-      garmentColor: 'Transparente',
-      status: 'Entregado',
-      deliveryDate: '2026-09-26',
-      totalAmount: 110000,
-      depositAmount: 110000,
-      notes: 'Transferencia directa sin calor. Adhesión ultra fuerte.',
-      createdAt: '2026-09-22',
-    },
-  ]);
+  const [orders, setOrders] = useState<CustomerOrder[]>(() => {
+    try {
+      const saved = localStorage.getItem('sublidtf_orders');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Error reading orders from localStorage', e);
+    }
+    return INITIAL_ORDERS_DATA;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sublidtf_orders', JSON.stringify(orders));
+    } catch (e) {
+      console.warn('Error saving orders to localStorage', e);
+    }
+  }, [orders]);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');

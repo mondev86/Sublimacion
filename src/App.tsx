@@ -202,26 +202,30 @@ export default function App() {
         </div>
       )}
 
-      {/* MAIN VIEWPORT */}
-      <main className="flex-1 overflow-hidden relative w-full h-full flex flex-col">
-        {activeView === 'editor' && (
+      {/* MAIN VIEWPORT - Keep views mounted to preserve undo history, canvas state, and zoom across tab switches */}
+      <main className="flex-1 overflow-hidden relative w-full h-full">
+        <div className={`w-full h-full ${activeView === 'editor' ? 'flex flex-col' : 'hidden'}`}>
           <ArtworkEditor
             onSendToNesting={handleSendToNesting}
             onOpenAR={handleOpenAR}
           />
-        )}
+        </div>
 
-        {activeView === 'nesting' && (
+        <div className={`w-full h-full ${activeView === 'nesting' ? 'flex flex-col' : 'hidden'}`}>
           <NestingBuilder initialArtwork={nestingArtworkBridge} />
-        )}
+        </div>
 
-        {activeView === 'ar_preview' && (
+        <div className={`w-full h-full ${activeView === 'ar_preview' ? 'flex flex-col' : 'hidden'}`}>
           <VirtualARPreview initialDesignUrl={arDesignUrlBridge || undefined} />
-        )}
+        </div>
 
-        {activeView === 'orders' && <OrderManager />}
+        <div className={`w-full h-full ${activeView === 'orders' ? 'flex flex-col' : 'hidden'}`}>
+          <OrderManager />
+        </div>
 
-        {activeView === 'inventory' && <InventoryManager />}
+        <div className={`w-full h-full ${activeView === 'inventory' ? 'flex flex-col' : 'hidden'}`}>
+          <InventoryManager />
+        </div>
       </main>
 
       {/* AI DESIGN GENERATOR MODAL */}

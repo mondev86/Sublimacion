@@ -27,6 +27,7 @@ export const AIDesignGenerator: React.FC<AIDesignGeneratorProps> = ({
   const [style, setStyle] = useState<string>('Ilustración vectorial alto contraste, contornos limpios sin fondo');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [isOfflineMode, setIsOfflineMode] = useState<boolean>(false);
 
   const [ideas, setIdeas] = useState<Array<{
     title: string;
@@ -69,6 +70,7 @@ export const AIDesignGenerator: React.FC<AIDesignGeneratorProps> = ({
       const data = await res.json();
       if (data.ideas && data.ideas.length > 0) {
         setIdeas(data.ideas);
+        setIsOfflineMode(Boolean(data.mockFallback));
       }
     } catch (err) {
       console.error('Error fetching design ideas:', err);
@@ -162,6 +164,12 @@ export const AIDesignGenerator: React.FC<AIDesignGeneratorProps> = ({
 
         {/* Ideas List */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3">
+          {isOfflineMode && (
+            <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+              <span>Modo Offline: Mostrando catálogo base de ideas pre-calibradas para taller.</span>
+            </div>
+          )}
           {ideas.map((idea, idx) => (
             <div
               key={idx}

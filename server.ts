@@ -129,11 +129,21 @@ Devuelve un análisis técnico profesional estructurado en formato JSON con los 
       },
     });
 
+    const colorLabel = garmentColor || 'estándar';
+    const isLightGarment =
+      typeof garmentColor === 'string' &&
+      (garmentColor.toLowerCase().includes('blanco') ||
+        garmentColor.toLowerCase().includes('claro') ||
+        garmentColor.toLowerCase() === '#ffffff' ||
+        garmentColor.toLowerCase() === '#f8fafc');
+
     const fallbackAnalysis = {
-      summary: `Diagnóstico para ${technique || 'DTF Textil'} en prenda ${garmentColor || 'Negra'}.`,
+      summary: `Diagnóstico para ${technique || 'DTF Textil'} sobre base ${colorLabel}.`,
       dpiAssessment: 'Resolución adecuada para producción comercial a 300 DPI.',
-      whiteUnderbasePercent: 85,
-      powderAdhesionAdvice: 'Para prendas oscuras en DTF, asegurar calado en sombras suaves para evitar poliamida excesiva.',
+      whiteUnderbasePercent: isLightGarment && technique === 'Sublimación' ? 0 : 80,
+      powderAdhesionAdvice: isLightGarment
+        ? 'En fondos claros con DTF, optimizar la cobertura blanca para reducir el espesor del film.'
+        : 'Para prendas de color o telas oscuras, asegurar calado en sombras para un tacto flexible y sin exceso de poliamida.',
       pressSettings: {
         temperature: technique === 'Sublimación' ? '200°C' : '160°C',
         time: technique === 'Sublimación' ? '45s' : '15s',
