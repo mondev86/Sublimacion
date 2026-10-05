@@ -220,6 +220,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
     | 'right_pocket'
     | 'left_sleeve'
     | 'right_sleeve'
+    | 'hem_center'
     | 'hem_left'
     | 'hem_right'
     | 'oversize_front'
@@ -279,16 +280,23 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
         setProportionalSize(8, 8);
         showToast('📍 Manga Derecha (8 × 8 cm · bíceps)');
         break;
+      case 'hem_center':
+        setPlacementDistanceCm(47.5);
+        setPlacementOffsetXCm(0);
+        setGarmentSide('front');
+        setProportionalSize(8, 8);
+        showToast('📍 Dobladillo Inferior Centro (8 × 8 cm · bajo central)');
+        break;
       case 'hem_left':
-        setPlacementDistanceCm(63.0);
-        setPlacementOffsetXCm(-16.0);
+        setPlacementDistanceCm(47.5);
+        setPlacementOffsetXCm(-7.0);
         setGarmentSide('front');
         setProportionalSize(6, 6);
         showToast('📍 Dobladillo Inferior Izquierdo (6 × 6 cm · bajo)');
         break;
       case 'hem_right':
-        setPlacementDistanceCm(63.0);
-        setPlacementOffsetXCm(16.0);
+        setPlacementDistanceCm(47.5);
+        setPlacementOffsetXCm(7.0);
         setGarmentSide('front');
         setProportionalSize(6, 6);
         showToast('📍 Dobladillo Inferior Derecho (6 × 6 cm · bajo)');
@@ -1375,6 +1383,84 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
               </button>
             </div>
 
+            {/* Direct Physical Size Controls (Lienzo / Estampa) */}
+            <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs shrink-0">
+              <span className="text-slate-400 font-medium text-[11px]">Tamaño:</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  step="0.5"
+                  min="3"
+                  max="120"
+                  value={targetWidthCm}
+                  onChange={(e) => {
+                    const w = parseFloat(e.target.value) || 10;
+                    setTargetWidthCm(w);
+                    const aspect = pixelHeight / pixelWidth;
+                    setTargetHeightCm(Math.round(w * aspect * 10) / 10);
+                  }}
+                  className="w-11 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-white font-mono text-[11px] text-center focus:outline-none focus:border-indigo-500"
+                  title="Ancho en centímetros"
+                />
+                <span className="text-slate-500 font-mono text-[10px]">×</span>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="3"
+                  max="200"
+                  value={targetHeightCm}
+                  onChange={(e) => setTargetHeightCm(parseFloat(e.target.value) || 10)}
+                  className="w-11 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-white font-mono text-[11px] text-center focus:outline-none focus:border-indigo-500"
+                  title="Alto en centímetros"
+                />
+                <span className="text-slate-400 text-[10px] font-semibold">cm</span>
+              </div>
+              <div className="flex items-center gap-0.5 ml-1 border-l border-slate-800 pl-1.5">
+                <button
+                  onClick={() => {
+                    pushSnapshot();
+                    const aspect = pixelHeight / pixelWidth;
+                    const w = 21;
+                    setTargetWidthCm(w);
+                    setTargetHeightCm(Math.min(29.7, Math.round(w * aspect * 10) / 10));
+                    showToast('Formato A4 fijado (21 × 29.7 cm)');
+                  }}
+                  className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                  title="A4 (21 × 29.7 cm)"
+                >
+                  A4
+                </button>
+                <button
+                  onClick={() => {
+                    pushSnapshot();
+                    const aspect = pixelHeight / pixelWidth;
+                    const w = 29.7;
+                    setTargetWidthCm(w);
+                    setTargetHeightCm(Math.min(42, Math.round(w * aspect * 10) / 10));
+                    showToast('Formato A3 fijado (29.7 × 42 cm)');
+                  }}
+                  className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                  title="A3 (29.7 × 42 cm)"
+                >
+                  A3
+                </button>
+                <button
+                  onClick={() => {
+                    pushSnapshot();
+                    const aspect = pixelHeight / pixelWidth;
+                    const w = 10;
+                    setTargetWidthCm(w);
+                    setTargetHeightCm(Math.min(10, Math.round(w * aspect * 10) / 10));
+                    showToast('Bolsillo fijado (10 × 10 cm)');
+                  }}
+                  className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                  title="Bolsillo Pecho (10 × 10 cm)"
+                >
+                  Bolsillo
+                </button>
+              </div>
+            </div>
+
             {/* Compact Zoom Controls */}
             <div className="flex items-center gap-0.5 sm:gap-1 pl-1 border-l border-slate-800">
               <button
@@ -1697,6 +1783,13 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
             backgroundSize: bgPreviewType === 'checker' ? '20px 20px' : '20px 20px',
             backgroundPosition: bgPreviewType === 'checker' ? '0 0, 0 10px, 10px -10px, -10px 0px' : '0 0',
           }}
+          onWheel={(e) => {
+            if (e.ctrlKey || e.metaKey) {
+              e.preventDefault();
+              const delta = e.deltaY < 0 ? 0.08 : -0.08;
+              setZoomLevel((z) => Math.max(0.4, Math.min(2.5, Math.round((z + delta) * 100) / 100)));
+            }
+          }}
         >
           {/* Floating Action Toast Notification */}
           {toastMessage && (
@@ -1810,6 +1903,58 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                           >
                             <RotateCw className="w-3 h-3 text-amber-300" />
                             <span>Espalda</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Tamaño del Arte y Redimensionado Rápido */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">Tamaño Lienzo / Arte</span>
+                          <span className="text-[9px] font-mono font-bold text-indigo-300">
+                            {targetWidthCm} × {targetHeightCm} cm
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              pushSnapshot();
+                              const aspect = pixelHeight / pixelWidth;
+                              const newW = Math.max(4, Math.round((targetWidthCm - 2) * 10) / 10);
+                              setTargetWidthCm(newW);
+                              setTargetHeightCm(Math.round(newW * aspect * 10) / 10);
+                            }}
+                            className="flex-1 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[10px] font-bold cursor-pointer transition-colors"
+                            title="Reducir 2 cm"
+                          >
+                            -2 cm
+                          </button>
+                          <button
+                            onClick={() => {
+                              pushSnapshot();
+                              const aspect = pixelHeight / pixelWidth;
+                              const w = 28;
+                              setTargetWidthCm(w);
+                              setTargetHeightCm(Math.round(w * aspect * 10) / 10);
+                              showToast('Tamaño 28 cm estándar');
+                            }}
+                            className="px-2 py-1 rounded bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 hover:text-white text-[10px] font-bold cursor-pointer transition-colors font-mono"
+                            title="Fijar 28 cm estándar"
+                          >
+                            Estándar
+                          </button>
+                          <button
+                            onClick={() => {
+                              pushSnapshot();
+                              const aspect = pixelHeight / pixelWidth;
+                              const newW = Math.min(60, Math.round((targetWidthCm + 2) * 10) / 10);
+                              setTargetWidthCm(newW);
+                              setTargetHeightCm(Math.round(newW * aspect * 10) / 10);
+                            }}
+                            className="flex-1 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[10px] font-bold cursor-pointer transition-colors"
+                            title="Aumentar 2 cm"
+                          >
+                            +2 cm
                           </button>
                         </div>
                       </div>
@@ -2070,11 +2215,41 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                 className="w-full h-full object-contain pointer-events-none"
                               />
                             ) : null}
-                            {/* Active border & size indicator */}
+                            {/* Active border & interactive size control pill */}
                             <div className="absolute inset-0 border border-indigo-400/30 rounded pointer-events-none group-hover:border-indigo-400">
-                              <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-mono text-white bg-slate-950/90 px-1.5 py-0.5 rounded whitespace-nowrap border border-slate-800">
-                                {targetWidthCm} x {targetHeightCm} cm
-                              </span>
+                              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 pointer-events-auto bg-slate-950/95 px-2 py-0.5 rounded-full border border-slate-700/80 shadow-xl text-[10px] font-mono text-white whitespace-nowrap z-30">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    pushSnapshot();
+                                    const aspect = pixelHeight / pixelWidth;
+                                    const newW = Math.max(4, Math.round((targetWidthCm - 1) * 10) / 10);
+                                    setTargetWidthCm(newW);
+                                    setTargetHeightCm(Math.round(newW * aspect * 10) / 10);
+                                  }}
+                                  className="w-4 h-4 rounded-full bg-slate-800 hover:bg-indigo-600 flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white cursor-pointer transition-colors"
+                                  title="Reducir tamaño (-1 cm)"
+                                >
+                                  -
+                                </button>
+                                <span className="font-bold text-indigo-300 select-none">
+                                  {targetWidthCm} × {targetHeightCm} cm
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    pushSnapshot();
+                                    const aspect = pixelHeight / pixelWidth;
+                                    const newW = Math.min(60, Math.round((targetWidthCm + 1) * 10) / 10);
+                                    setTargetWidthCm(newW);
+                                    setTargetHeightCm(Math.round(newW * aspect * 10) / 10);
+                                  }}
+                                  className="w-4 h-4 rounded-full bg-slate-800 hover:bg-indigo-600 flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white cursor-pointer transition-colors"
+                                  title="Aumentar tamaño (+1 cm)"
+                                >
+                                  +
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </>
@@ -2256,7 +2431,7 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                               <button
                                 onClick={() => applyPlacementPreset('hem_left')}
                                 className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
-                                  garmentSide === 'front' && placementDistanceCm >= 50 && placementOffsetXCm < 0
+                                  garmentSide === 'front' && placementDistanceCm >= 44 && placementDistanceCm <= 50 && placementOffsetXCm < -3
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
@@ -2265,9 +2440,20 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                                 Dobladillo Izq. <span className="text-[9px] text-pink-400 font-mono block">6 × 6 cm</span>
                               </button>
                               <button
+                                onClick={() => applyPlacementPreset('hem_center')}
+                                className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border col-span-2 ${
+                                  garmentSide === 'front' && placementDistanceCm >= 44 && placementDistanceCm <= 50 && Math.abs(placementOffsetXCm) <= 3
+                                    ? 'bg-indigo-600/30 border-indigo-500 text-white'
+                                    : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
+                                }`}
+                                title="Dobladillo Inferior Centro (8 × 8 cm · bajo central)"
+                              >
+                                Dobladillo Centro <span className="text-[9px] text-pink-400 font-mono block">8 × 8 cm · Centrado</span>
+                              </button>
+                              <button
                                 onClick={() => applyPlacementPreset('hem_right')}
                                 className={`px-2 py-1 rounded text-left truncate font-medium transition-colors border ${
-                                  garmentSide === 'front' && placementDistanceCm >= 50 && placementOffsetXCm > 0
+                                  garmentSide === 'front' && placementDistanceCm >= 44 && placementDistanceCm <= 50 && placementOffsetXCm > 3
                                     ? 'bg-indigo-600/30 border-indigo-500 text-white'
                                     : 'bg-slate-800/90 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
                                 }`}
@@ -3668,10 +3854,11 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Mangas & Dobladillos</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     {[
-                      { id: 'left_sleeve', label: 'Manga Izquierda', note: '8 × 8 cm · bíceps' },
-                      { id: 'right_sleeve', label: 'Manga Derecha', note: '8 × 8 cm · bíceps' },
-                      { id: 'hem_left', label: 'Dobladillo Izq.', note: '6 × 6 cm · bajo' },
-                      { id: 'hem_right', label: 'Dobladillo Der.', note: '6 × 6 cm · bajo' },
+                      { id: 'left_sleeve', label: 'Manga Izquierda', note: '8 × 8 cm · bíceps', colSpan: false },
+                      { id: 'right_sleeve', label: 'Manga Derecha', note: '8 × 8 cm · bíceps', colSpan: false },
+                      { id: 'hem_center', label: 'Dobladillo Centro', note: '8 × 8 cm · centrado', colSpan: true },
+                      { id: 'hem_left', label: 'Dobladillo Izq.', note: '6 × 6 cm · bajo', colSpan: false },
+                      { id: 'hem_right', label: 'Dobladillo Der.', note: '6 × 6 cm · bajo', colSpan: false },
                     ].map((p) => (
                       <button
                         key={p.id}
@@ -3680,11 +3867,14 @@ export const ArtworkEditor: React.FC<ArtworkEditorProps> = ({ onSendToNesting, o
                           setViewSplit('on_garment');
                         }}
                         className={`px-2.5 py-1.5 rounded-md font-medium text-[11px] border transition-colors text-left truncate ${
+                          p.colSpan ? 'col-span-2' : ''
+                        } ${
                           garmentSide === 'front' &&
                           ((p.id === 'left_sleeve' && placementOffsetXCm === -26.0) ||
                             (p.id === 'right_sleeve' && placementOffsetXCm === 26.0) ||
-                            (p.id === 'hem_left' && placementDistanceCm >= 55 && placementOffsetXCm < 0) ||
-                            (p.id === 'hem_right' && placementDistanceCm >= 55 && placementOffsetXCm > 0))
+                            (p.id === 'hem_center' && placementDistanceCm >= 44 && placementDistanceCm <= 50 && Math.abs(placementOffsetXCm) <= 3) ||
+                            (p.id === 'hem_left' && placementDistanceCm >= 44 && placementDistanceCm <= 50 && placementOffsetXCm < -3) ||
+                            (p.id === 'hem_right' && placementDistanceCm >= 44 && placementDistanceCm <= 50 && placementOffsetXCm > 3))
                             ? 'bg-indigo-600/30 border-indigo-500 text-white'
                             : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
                         }`}
